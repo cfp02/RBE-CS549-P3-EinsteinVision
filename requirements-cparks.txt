@@ -1,0 +1,17 @@
+scikit-image
+scikit-learn
+tqdm
+opencv-python
+matplotlib
+kornia
+termcolor
+tensorboard
+onnx
+numpy
+torch
+torchvision
+pandas
+scipy
+lightning
+nptyping
+imageio
