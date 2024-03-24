@@ -28,22 +28,26 @@ def main():
     BASE_PATH = os.path.dirname(__file__)
     P3_Data_path = os.path.join(BASE_PATH, "..\P3Data")
 
-    video_path = get_camera_video(1, "front", P3_Data_path)
+    video_path = get_camera_video(2, "front", P3_Data_path)
     print(video_path)
+
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         print("Error opening video stream or file")
         sys.exit(1)
 
+    frames: list[tuple] = []
+    frame_num = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if ret:
-            cv2.imshow('Frame', frame)
-            if cv2.waitKey(25) & 0xFF == ord('q'):
-                break
+            frames.append((frame, frame_num))
+            frame_num += 1
         else:
             break
+
+    print(f"Number of frames: {len(frames)}")
 
 
 
