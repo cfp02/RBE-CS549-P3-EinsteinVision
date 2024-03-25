@@ -10,7 +10,7 @@ import json
 PI = math.pi
 
 ASSETS_DIR = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../P3Data", "Assets"))
-
+BASE_PATH = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../Output"))
 
 class AssetController:
     '''
@@ -22,9 +22,9 @@ class AssetController:
         if json_file is not None:
             self.json_to_assets(json_file)
             # Created all assets in memory
-            
-            #Place the first frame's objects
-            self.place_assets(min(self.frames.keys()))
+
+    def place_first_frame(self):
+        self.place_assets(min(self.frames.keys()))
 
 
     def add_assets(self, assets, frame=0):
@@ -36,19 +36,20 @@ class AssetController:
     def place_assets(self, frame=0):
         if frame in self.frames:
             for asset in self.frames[frame]:
-                asset.place(asset.location)
+                asset.place(asset.location, additional_rotation=asset.rotation)
     
     def json_to_assets(self, json_file):
         json_reader = JSONReader(json_file)
         print(len(json_reader.data))
         for frame_data in json_reader.data:
             frame = frame_data['frame']
-            assets = frame_data['assets']
+            # assets = frame_data['assets']
+            assets = frame_data['objects']
             asset_list = []
             for asset_json in assets:
                 # Create the asset object
                 asset = Asset(self.asset_type_from_string(asset_json['type']), 
-                              location=mathutils.Vector(asset_json['location']),
+                              location=mathutils.Vector([coord * 50 for coord in asset_json['location']]),
                               rotation=mathutils.Euler(asset_json['rotation'], 'XYZ'),
                               scaling=asset_json['scaling'])
                 asset_list.append(asset)
@@ -58,13 +59,13 @@ class AssetController:
         asset_type = None
         # Phase 1 includes only lanes, vehicles, pedestrians, traffic lights, stop signs
         match type_str:
-            case "Sedan":
+            case "Sedan" | 'car' | 'truck':
                 asset_type = AssetType.Sedan
             case "StopSign":
                 asset_type = AssetType.StopSign
             case "TrafficCone":
                 asset_type = AssetType.TrafficCone
-            case "Pedestrian":
+            case "Pedestrian" | 'person':
                 asset_type = AssetType.Pedestrian
             case "Dustbin":
                 asset_type = AssetType.Dustbin
@@ -74,7 +75,7 @@ class AssetController:
                 asset_type = AssetType.SmallPole
             case "SpeedLimitSign":
                 asset_type = AssetType.SpeedLimitSign
-            case "TrafficLight":
+            case "TrafficLight" | "traffic light":
                 asset_type = AssetType.TrafficLight
             case _:
                 print("Asset type not recognized. You're gonna be a fire hydrant! --", type_str)
@@ -88,12 +89,12 @@ class AssetType(enum.Enum):
     Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), .12)
     StopSign = ("StopSign.blend", "StopSign_Geo", (math.pi/2, 0, math.pi/2), 2.0)
     TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (math.pi/2, 0, 0), 10.0)
-    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (math.pi/2, 0, 0), .055)
+    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (math.pi/2, 0, PI), .055)
     Dustbin = ("Dustbin.blend", "Bin_Mesh.072", (PI/2, 0, 0), 10)
     FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), 1.5)
     SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), 1.0) # Probably for a chain gate or something, probably won't use   
     SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, 0), 4.0)
-    TrafficLight = ("TrafficSignal.blend", "Traffic_signal1", (PI/2, 0, 0), 1.5)
+    TrafficLight = ("TrafficSignal.blend", "Traffic_signal1", (PI/2, 0, PI/2), 1.5)
     # Lane markings
 
     def __init__(self, file_path, obj_name, default_rotation, default_scaling):
@@ -103,19 +104,22 @@ class AssetType(enum.Enum):
         self.default_scaling = default_scaling
 
 class Asset:
-    def __init__(self, asset_type: AssetType, location=None, rotation=None, scaling=None):
+    def __init__(self, asset_type: AssetType, location=None, rotation=None, scaling=None, coord_flip_correction=True):
         self.asset_type = asset_type
         self.location = location if location is not None else mathutils.Vector((0, 0, 0))
-        print("This is the location: ", self.location)
+        # print("This is the location: ", self.location)
         self.rotation = rotation if rotation is not None else self.asset_type.default_rotation
         self.scaling = scaling * self.asset_type.default_scaling if scaling is not None else self.asset_type.default_scaling
         self.id = None
+        self.coord_flip_correction = coord_flip_correction
         print("Created Asset of type: ", asset_type)
 
     def place(self, location, assets_dir = ASSETS_DIR, additional_rotation=(0, 0, 0), scaling=None):
         self.location = location
         if scaling is not None:
             self.scaling = self.scaling * scaling
+        if self.coord_flip_correction:
+            self.location = mathutils.Vector((-location.x, -location.z, -location.y))
         # Apply default rotation and additional rotation
         total_rotation = [d + a for d, a in zip(self.asset_type.default_rotation, additional_rotation)]
         self.rotation = mathutils.Euler(total_rotation, 'XYZ')
@@ -198,8 +202,43 @@ class JSONReader:
             self.data = json.load(file)
         print("Finished reading JSON file, data: ", self.data)
 
+def set_output_settings(output_filepath, resolution_x=1280, resolution_y=960, frame_start=1, frame_end=1):
+    scene = bpy.context.scene
+    scene.render.image_settings.file_format = 'PNG'
+    scene.render.filepath = output_filepath
+    scene.render.resolution_x = resolution_x
+    scene.render.resolution_y = resolution_y
+    scene.frame_start = frame_start
+    scene.frame_end = frame_end
 
+def set_active_camera(camera_name):
+    bpy.context.scene.camera = bpy.data.objects[camera_name]
 
+def add_camera(location=(0, 0, 0), target=(0, 0, 0)):
+    # Add camera
+    bpy.ops.object.camera_add(location=location)
+    camera = bpy.context.object
+
+    # Point camera at target
+    direction = mathutils.Vector(target) - camera.location
+    rot_quat = direction.to_track_quat('-Z', 'Y')
+
+    camera.rotation_euler = rot_quat.to_euler()
+
+    return camera
+
+def set_active_camera(camera_name):
+    bpy.context.scene.camera = bpy.data.objects[camera_name]
+
+def add_light(location=(0, 0, 0), light_type='POINT', energy=1000):
+    # Add light
+    bpy.ops.object.light_add(type=light_type, location=location)
+    light = bpy.context.object
+
+    # Set light energy
+    light.data.energy = energy
+
+    return light
 
 def main():
     
@@ -213,12 +252,23 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController('assets.json')
-
-    
+    asset_controller = AssetController('data.json')
+    asset_controller.place_first_frame()
         
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
-    print("Finished")
+    print("Finished creating, now rendering")
+
+    cam = add_camera((0, 10, 2), (0, 0, 2))
+    print("Camera added: ", cam)
+    set_active_camera(cam.name)
+    print("Camera set to active: ", cam)
+
+    add_light((0, 0, 100), 'SUN', 100)
+
+    set_output_settings(os.path.join(BASE_PATH, "out1.png"), frame_start=1, frame_end=1)
+    print("Output settings set")
+    bpy.ops.render.render(write_still=True)
+    print("Rendered image")
 
 if __name__ == "__main__":
     main()
