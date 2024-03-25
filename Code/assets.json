@@ -4,13 +4,13 @@
         "assets": [
             {
                 "type": "Sedan",
-                "location": [1, 5, 0],
+                "location": [20, 5, 0],
                 "rotation": [0, 0, 0],
                 "scaling": 1.0
             },
             {
                 "type": "StopSign",
-                "location": [0, 0, 0],
+                "location": [0, 30, 0],
                 "rotation": [0, 0, 0],
                 "scaling": 1.0
             }

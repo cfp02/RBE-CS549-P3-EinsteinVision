@@ -20,18 +20,68 @@ class AssetController:
     def __init__(self, json_file=None):
         self.frames : dict[int, list[Asset]] = {}
         if json_file is not None:
-            json_reader = JSONReader(json_file)
+            self.json_to_assets(json_file)
+            # Created all assets in memory
+            
+            #Place the first frame's objects
+            self.place_assets(min(self.frames.keys()))
 
-
-    # def add_asset(self, asset, frame=0):
-    #     if frame not in self.frames:
-    #         self.frames[frame] = []
-    #     self.frames[frame].append(asset)
 
     def add_assets(self, assets, frame=0):
         if frame not in self.frames:
             self.frames[frame] = []
         self.frames[frame].extend(assets)
+        # print("Added these assets: ", assets, " to frame: ", frame)
+
+    def place_assets(self, frame=0):
+        if frame in self.frames:
+            for asset in self.frames[frame]:
+                asset.place(asset.location)
+    
+    def json_to_assets(self, json_file):
+        json_reader = JSONReader(json_file)
+        print(len(json_reader.data))
+        for frame_data in json_reader.data:
+            frame = frame_data['frame']
+            assets = frame_data['assets']
+            asset_list = []
+            for asset_json in assets:
+                # Create the asset object
+                asset = Asset(self.asset_type_from_string(asset_json['type']), 
+                              location=mathutils.Vector(asset_json['location']),
+                              rotation=mathutils.Euler(asset_json['rotation'], 'XYZ'),
+                              scaling=asset_json['scaling'])
+                asset_list.append(asset)
+            self.add_assets(asset_list, frame)
+
+    def asset_type_from_string(self, type_str):
+        asset_type = None
+        # Phase 1 includes only lanes, vehicles, pedestrians, traffic lights, stop signs
+        match type_str:
+            case "Sedan":
+                asset_type = AssetType.Sedan
+            case "StopSign":
+                asset_type = AssetType.StopSign
+            case "TrafficCone":
+                asset_type = AssetType.TrafficCone
+            case "Pedestrian":
+                asset_type = AssetType.Pedestrian
+            case "Dustbin":
+                asset_type = AssetType.Dustbin
+            case "FireHyrant":
+                asset_type = AssetType.FireHyrant
+            case "SmallPole":
+                asset_type = AssetType.SmallPole
+            case "SpeedLimitSign":
+                asset_type = AssetType.SpeedLimitSign
+            case "TrafficLight":
+                asset_type = AssetType.TrafficLight
+            case _:
+                print("Asset type not recognized. You're gonna be a fire hydrant! --", type_str)
+                asset_type = AssetType.FireHyrant
+
+        return asset_type
+
 
 class AssetType(enum.Enum):
     # Asset types: (file_path, obj_name, default_rotation, default_scaling)
@@ -53,12 +103,14 @@ class AssetType(enum.Enum):
         self.default_scaling = default_scaling
 
 class Asset:
-    def __init__(self, asset_type: AssetType):
+    def __init__(self, asset_type: AssetType, location=None, rotation=None, scaling=None):
         self.asset_type = asset_type
-        self.location = mathutils.Vector((0, 0, 0))
-        self.rotation = mathutils.Euler(asset_type.default_rotation, 'XYZ')
-        self.scaling = asset_type.default_scaling
+        self.location = location if location is not None else mathutils.Vector((0, 0, 0))
+        print("This is the location: ", self.location)
+        self.rotation = rotation if rotation is not None else self.asset_type.default_rotation
+        self.scaling = scaling * self.asset_type.default_scaling if scaling is not None else self.asset_type.default_scaling
         self.id = None
+        print("Created Asset of type: ", asset_type)
 
     def place(self, location, assets_dir = ASSETS_DIR, additional_rotation=(0, 0, 0), scaling=None):
         self.location = location
@@ -141,36 +193,11 @@ class JSONReader:
         self.read()
 
     def read(self):
+        print("Reading JSON file: ", self.filepath)
         with open(self.filepath, 'r') as file:
             self.data = json.load(file)
+        print("Finished reading JSON file, data: ", self.data)
 
-    def get_asset(self, asset_id):
-        asset_data = self.data.get(asset_id)
-        if asset_data is None:
-            return None
-        asset_type = AssetType[asset_data["type"]]
-        asset = Asset(asset_type)
-        asset.location = mathutils.Vector(asset_data["location"])
-        asset.rotation = mathutils.Euler(asset_data["rotation"], 'XYZ')
-        asset.scaling = asset_data["scaling"]
-        return asset
-
-    def get_all_assets(self):
-        assets = []
-        for asset_id in self.data.keys():
-            asset = self.get_asset(asset_id)
-            if asset is not None:
-                assets.append(asset)
-        return assets
-
-    def get_asset_ids(self):
-        return list(self.data.keys())
-
-    def get_asset_data(self, asset_id):
-        return self.data.get(asset_id)
-
-    def get_all_asset_data(self):
-        return self.data
 
 
 
@@ -185,11 +212,13 @@ def main():
     # create_all_assets()
     # create_random_cars(10)
 
+    print("Creating assetcontroller")
     asset_controller = AssetController('assets.json')
 
     
         
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
+    print("Finished")
 
 if __name__ == "__main__":
     main()
