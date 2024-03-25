@@ -11,6 +11,28 @@ PI = math.pi
 
 ASSETS_DIR = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../P3Data", "Assets"))
 
+
+class AssetController:
+    '''
+    In charge of holding all of the Assets in the scene and managing actions related to them
+    '''
+
+    def __init__(self, json_file=None):
+        self.frames : dict[int, list[Asset]] = {}
+        if json_file is not None:
+            json_reader = JSONReader(json_file)
+
+
+    # def add_asset(self, asset, frame=0):
+    #     if frame not in self.frames:
+    #         self.frames[frame] = []
+    #     self.frames[frame].append(asset)
+
+    def add_assets(self, assets, frame=0):
+        if frame not in self.frames:
+            self.frames[frame] = []
+        self.frames[frame].extend(assets)
+
 class AssetType(enum.Enum):
     # Asset types: (file_path, obj_name, default_rotation, default_scaling)
     Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), .12)
@@ -29,7 +51,6 @@ class AssetType(enum.Enum):
         self.obj_name = obj_name
         self.default_rotation = default_rotation
         self.default_scaling = default_scaling
-
 
 class Asset:
     def __init__(self, asset_type: AssetType):
@@ -90,6 +111,30 @@ def create_all_assets(random_placement=False):
         asset.place(mathutils.Vector((x, y, 0)))
 
 class JSONReader:
+    """
+    JSON File in the format of:
+
+    [
+        {
+            "frame": 1,
+            "assets": [
+                {
+                    "type": "Sedan",
+                    "location": [0, 0, 0],
+                    "rotation": [0, 0, 0],
+                    "scaling": 1.0
+                },
+                {
+                    "type": "StopSign",
+                    "location": [0, 0, 0],
+                    "rotation": [0, 0, 0],
+                    "scaling": 1.0
+                }
+            ]
+        }
+    ]
+
+    """
     def __init__(self, filepath):
         self.filepath = filepath
         self.data = None
@@ -127,43 +172,6 @@ class JSONReader:
     def get_all_asset_data(self):
         return self.data
 
-    def get_asset_type(self, asset_id):
-        asset_data = self.get_asset_data(asset_id)
-        if asset_data is None:
-            return None
-        return AssetType[asset_data["type"]]
-
-    def get_asset_location(self, asset_id):
-        asset_data = self.get_asset_data(asset_id)
-        if asset_data is None:
-            return None
-        return mathutils.Vector(asset_data["location"])
-
-    def get_asset_rotation(self, asset_id):
-        asset_data = self.get_asset_data(asset_id)
-        if asset_data is None:
-            return None
-        return mathutils.Euler(asset_data["rotation"], 'XYZ')
-
-    def get_asset_scaling(self, asset_id):
-        asset_data = self.get_asset_data(asset_id)
-        if asset_data is None:
-            return None
-        return asset_data["scaling"]
-
-    def get_asset_ids_by_type(self, asset_type):
-        asset_ids = []
-        for asset_id in self.data.keys():
-            if self.get_asset_type(asset_id) == asset_type:
-                asset_ids.append(asset_id)
-        return asset_ids
-
-    def get_asset_ids_by_location(self, location):
-        asset_ids = []
-        for asset_id in self.data.keys():
-            if self.get_asset_location(asset_id) == location:
-                asset_ids.append(asset_id)
-        return asset
 
 
 def main():
@@ -174,10 +182,13 @@ def main():
     # stop_sign = Asset(AssetType.StopSign)
     # stop_sign.place(mathutils.Vector((-2, -2, 0)), additional_rotation=(0,0,0))
 
-    create_all_assets()
+    # create_all_assets()
     # create_random_cars(10)
 
+    asset_controller = AssetController('assets.json')
+
     
+        
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
 
 if __name__ == "__main__":

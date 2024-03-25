@@ -1,0 +1,36 @@
+[
+    {
+        "frame": 0,
+        "assets": [
+            {
+                "type": "Sedan",
+                "location": [1, 5, 0],
+                "rotation": [0, 0, 0],
+                "scaling": 1.0
+            },
+            {
+                "type": "StopSign",
+                "location": [0, 0, 0],
+                "rotation": [0, 0, 0],
+                "scaling": 1.0
+            }
+        ]
+    },
+    {
+        "frame": 1,
+        "assets": [
+            {
+                "type": "Sedan",
+                "location": [12, 0, 0],
+                "rotation": [0, 0, 0],
+                "scaling": 1.0
+            },
+            {
+                "type": "StopSign",
+                "location": [10, 0, 0],
+                "rotation": [0, 0, 0],
+                "scaling": 1.0
+            }
+        ]
+    }
+]
