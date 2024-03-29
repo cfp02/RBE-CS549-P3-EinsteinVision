@@ -61,7 +61,7 @@ class AssetController:
         match type_str:
             case "Sedan" | 'car' | 'truck':
                 asset_type = AssetType.Sedan
-            case "StopSign":
+            case "StopSign" | "stop sign":
                 asset_type = AssetType.StopSign
             case "TrafficCone":
                 asset_type = AssetType.TrafficCone
@@ -116,6 +116,7 @@ class Asset:
 
     def place(self, location, assets_dir = ASSETS_DIR, additional_rotation=(0, 0, 0), scaling=None):
         self.location = location
+
         if scaling is not None:
             self.scaling = self.scaling * scaling
         if self.coord_flip_correction:
@@ -123,6 +124,10 @@ class Asset:
         # Apply default rotation and additional rotation
         total_rotation = [d + a for d, a in zip(self.asset_type.default_rotation, additional_rotation)]
         self.rotation = mathutils.Euler(total_rotation, 'XYZ')
+        
+        # If it's a stop sign, translate down by 1.5 meters
+        if self.asset_type == AssetType.StopSign:
+            self.location.z = self.location.z - 10
         
         # Load the asset
         file_path = os.path.join(assets_dir, self.asset_type.file_path)
@@ -252,7 +257,7 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController('data.json')
+    asset_controller = AssetController('data3.json')
     asset_controller.place_first_frame()
         
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
@@ -265,7 +270,7 @@ def main():
 
     add_light((0, 0, 100), 'SUN', 100)
 
-    set_output_settings(os.path.join(BASE_PATH, "out1.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(BASE_PATH, "out3.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
