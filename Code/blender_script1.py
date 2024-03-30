@@ -161,8 +161,8 @@ class Asset:
             #     self.apply_texture(self.asset_type.file_path)
 
             # Add texture if it's a Speed Limit Sign
-            # if self.asset_type == AssetType.SpeedLimitSign:
-            #     self.apply_texture(appended_obj, 30)
+            if self.asset_type == AssetType.SpeedLimitSign:
+                self.change_speed_limit_texture(appended_obj, 40)
 
     def change_speed_limit_texture(self, obj, speed_limit):
         speed_lims = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
@@ -170,6 +170,25 @@ class Asset:
             print("Speed limit not in list of valid speed limits")
             return
         speed_lim_str = str(speed_limit)
+        speed_lim_png_path = self.asset_type.texture_path
+        # Replace the -6:-4 with the speed limit string
+        new_texture_path = speed_lim_png_path[:-6] + speed_lim_str + speed_lim_png_path[-4:]
+
+        mat = obj.data.materials[1] # second material
+        if not mat:
+            print("No material found")
+            return
+        if not mat.use_nodes:
+            mat.use_nodes = True
+
+        nodes = mat.node_tree.nodes
+        img_tex_node = next((node for node in nodes if node.type == 'TEX_IMAGE'), None)
+
+        if img_tex_node:
+            new_img = bpy.data.images.load(new_texture_path, check_existing=True)
+            img_tex_node.image = new_img
+        else:
+            print("Image Texture node not found.")
 
         
 
