@@ -64,7 +64,8 @@ class AssetController:
             case "Sedan" | 'car' | 'truck':
                 asset_type = AssetType.Sedan
             case "StopSign" | "stop sign":
-                asset_type = AssetType.StopSign
+                # asset_type = AssetType.StopSign
+                asset_type = AssetType.SpeedLimitSign
             case "TrafficCone":
                 asset_type = AssetType.TrafficCone
             case "Pedestrian" | 'person':
@@ -95,7 +96,7 @@ class AssetType(enum.Enum):
     Dustbin = ("Dustbin.blend", "Bin_Mesh.072", (PI/2, 0, 0), 10, None)
     FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), 1.5, None)
     SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), 1.0, None) # Probably f, or a chain gate or something, probably won't use   
-    SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, 0), 4.0, None)
+    SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, PI), 4.0, os.path.join(ASSETS_DIR, "SpeedLimitSigns/Speed_Limit_20.png"))
     TrafficLight = ("TrafficSignalRed.blend", "Traffic_signal1", (PI/2, 0, PI/2), 1.5, None)
     # Lane markings
 
@@ -155,15 +156,18 @@ class Asset:
             # if self.asset_type == AssetType.StopSign:
             #     self.apply_texture(self.asset_type.file_path)
 
-    def apply_texture(self, texture_path):
-        # Create a new material
-        mat = bpy.data.materials.new(name="TextureMaterial")
-        mat.use_nodes = True
-        bsdf = mat.node_tree.nodes.get('Principled BSDF')
-        texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
-        texImage.image = bpy.data.images.load(texture_path)
-        mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
-        self.id.data.materials.append(mat)
+            # Add texture if it's a Speed Limit Sign
+            # if self.asset_type == AssetType.SpeedLimitSign:
+            #     self.apply_texture(appended_obj, 30)
+
+    def change_speed_limit_texture(self, obj, speed_limit):
+        speed_lims = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70]
+        if speed_limit not in speed_lims:
+            print("Speed limit not in list of valid speed limits")
+            return
+        speed_lim_str = str(speed_limit)
+
+        
 
 def save_scene(filepath):
     bpy.ops.wm.save_as_mainfile(filepath=filepath)
@@ -276,7 +280,7 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController('data2.json')
+    asset_controller = AssetController('data3.json')
     asset_controller.place_first_frame()
         
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
@@ -289,7 +293,7 @@ def main():
 
     add_light((0, 0, 100), 'SUN', 100)
 
-    set_output_settings(os.path.join(BASE_PATH, "out1.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(BASE_PATH, "out4.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
