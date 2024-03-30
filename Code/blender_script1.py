@@ -11,6 +11,7 @@ PI = math.pi
 
 ASSETS_DIR = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../P3Data", "Assets"))
 BASE_PATH = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../Output"))
+JSON_DATA_PATH = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath),"../JSONData"))
 
 class AssetController:
     '''
@@ -19,8 +20,9 @@ class AssetController:
 
     def __init__(self, json_file=None):
         self.frames : dict[int, list[Asset]] = {}
-        if json_file is not None:
-            self.json_to_assets(json_file)
+        json_path = os.path.join(JSON_DATA_PATH, json_file)
+        if json_path is not None:
+            self.json_to_assets(json_path)
             # Created all assets in memory
 
     def place_first_frame(self):
@@ -85,23 +87,24 @@ class AssetController:
 
 
 class AssetType(enum.Enum):
-    # Asset types: (file_path, obj_name, default_rotation, default_scaling)
-    Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), .12)
-    StopSign = ("StopSign.blend", "StopSign_Geo", (math.pi/2, 0, math.pi/2), 2.0)
-    TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (math.pi/2, 0, 0), 10.0)
-    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (math.pi/2, 0, PI), .055)
-    Dustbin = ("Dustbin.blend", "Bin_Mesh.072", (PI/2, 0, 0), 10)
-    FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), 1.5)
-    SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), 1.0) # Probably for a chain gate or something, probably won't use   
-    SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, 0), 4.0)
-    TrafficLight = ("TrafficSignal.blend", "Traffic_signal1", (PI/2, 0, PI/2), 1.5)
+    # Asset types: (file_path, obj_name, default_rotation, default_scaling, texture_path=None)
+    Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), .12, None)
+    StopSign = ("StopSign.blend", "StopSign_Geo", (math.pi/2, 0, math.pi/2), 2.0, os.path.join(ASSETS_DIR, "StopSignImage.png"))
+    TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (math.pi/2, 0, 0), 10.0, None)
+    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (math.pi/2, 0, PI), .055, None)
+    Dustbin = ("Dustbin.blend", "Bin_Mesh.072", (PI/2, 0, 0), 10, None)
+    FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), 1.5, None)
+    SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), 1.0, None) # Probably f, or a chain gate or something, probably won't use   
+    SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, 0), 4.0, None)
+    TrafficLight = ("TrafficSignal.blend", "Traffic_signal1", (PI/2, 0, PI/2), 1.5, None)
     # Lane markings
 
-    def __init__(self, file_path, obj_name, default_rotation, default_scaling):
+    def __init__(self, file_path, obj_name, default_rotation, default_scaling, texture_path):
         self.file_path = file_path
         self.obj_name = obj_name
         self.default_rotation = default_rotation
         self.default_scaling = default_scaling
+        self.texture_path = texture_path
 
 class Asset:
     def __init__(self, asset_type: AssetType, location=None, rotation=None, scaling=None, coord_flip_correction=True):
@@ -131,6 +134,8 @@ class Asset:
         
         # Load the asset
         file_path = os.path.join(assets_dir, self.asset_type.file_path)
+
+        # Add the object to the scene
         bpy.ops.wm.append(filename="Object/" + self.asset_type.obj_name, directory=file_path, link=False)
         
         # Position the asset
@@ -145,6 +150,20 @@ class Asset:
             appended_obj.rotation_euler = self.rotation
             appended_obj.scale = (self.scaling, self.scaling, self.scaling)
             self.id = appended_obj
+
+            # # Add texture if it's a Stop Sign
+            # if self.asset_type == AssetType.StopSign:
+            #     self.apply_texture(self.asset_type.file_path)
+
+    def apply_texture(self, texture_path):
+        # Create a new material
+        mat = bpy.data.materials.new(name="TextureMaterial")
+        mat.use_nodes = True
+        bsdf = mat.node_tree.nodes.get('Principled BSDF')
+        texImage = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        texImage.image = bpy.data.images.load(texture_path)
+        mat.node_tree.links.new(bsdf.inputs['Base Color'], texImage.outputs['Color'])
+        self.id.data.materials.append(mat)
 
 def save_scene(filepath):
     bpy.ops.wm.save_as_mainfile(filepath=filepath)
@@ -270,7 +289,7 @@ def main():
 
     add_light((0, 0, 100), 'SUN', 100)
 
-    set_output_settings(os.path.join(BASE_PATH, "out3.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(BASE_PATH, "out6.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
