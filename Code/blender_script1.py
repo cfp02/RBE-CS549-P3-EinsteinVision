@@ -88,22 +88,23 @@ class AssetController:
 
 
 class AssetType(enum.Enum):
-    # Asset types: (file_path, obj_name, default_rotation, default_scaling, texture_path=None)
-    Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), .12, None)
-    StopSign = ("StopSign.blend", "StopSign_Geo", (math.pi/2, 0, math.pi/2), 2.0, os.path.join(ASSETS_DIR, "StopSignImage.png"))
-    TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (math.pi/2, 0, 0), 10.0, None)
-    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (math.pi/2, 0, PI), .055, None)
-    Dustbin = ("Dustbin.blend", "Bin_Mesh.072", (PI/2, 0, 0), 10, None)
-    FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), 1.5, None)
-    SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), 1.0, None) # Probably f, or a chain gate or something, probably won't use   
-    SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, PI), 4.0, os.path.join(ASSETS_DIR, "SpeedLimitSigns/Speed_Limit_20.png"))
-    TrafficLight = ("TrafficSignalRed.blend", "Traffic_signal1", (PI/2, 0, PI/2), 1.5, None)
+    # Asset types: (file_path, obj_name, default_rotation, default_scaling, default_translation, texture_path=None)
+    Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), (0,0,0), .12, None)
+    StopSign = ("StopSign.blend", "StopSign_Geo", (math.pi/2, 0, math.pi/2), (0,0,-10), 2.0, os.path.join(ASSETS_DIR, "StopSignImage.png"))
+    TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (math.pi/2, 0, 0), (0,0,0), 10.0, None)
+    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (math.pi/2, 0, PI), (0,0,0), .055, None)
+    Dustbin = ("Dustbin.blend", "Bin_Mesh.072", (PI/2, 0, 0), (0,0,0), 10, None)
+    FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), (0,0,0), 1.5, None)
+    SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), (0,0,0), 1.0, None) # Probably f, or a chain gate or something, probably won't use   
+    SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, PI), (0,0,-10), 4.0, os.path.join(ASSETS_DIR, "SpeedLimitSigns/Speed_Limit_20.png"))
+    TrafficLight = ("TrafficSignalRed.blend", "Traffic_signal1", (PI/2, 0, PI/2), (0,0,0), 1.5, None)
     # Lane markings
 
-    def __init__(self, file_path, obj_name, default_rotation, default_scaling, texture_path):
+    def __init__(self, file_path, obj_name, default_rotation, default_translation, default_scaling, texture_path):
         self.file_path = file_path
         self.obj_name = obj_name
         self.default_rotation = default_rotation
+        self.default_translation = default_translation
         self.default_scaling = default_scaling
         self.texture_path = texture_path
 
@@ -129,9 +130,12 @@ class Asset:
         total_rotation = [d + a for d, a in zip(self.asset_type.default_rotation, additional_rotation)]
         self.rotation = mathutils.Euler(total_rotation, 'XYZ')
         
-        # If it's a stop sign, translate down by 1.5 meters
-        if self.asset_type == AssetType.StopSign:
-            self.location.z = self.location.z - 10
+        # # If it's a stop sign, translate down by 1.5 meters
+        # if self.asset_type == AssetType.StopSign:
+        #     self.location.z = self.location.z - 10
+
+        # Apply default translation
+        self.location = self.location + mathutils.Vector(self.asset_type.default_translation)
         
         # Load the asset
         file_path = os.path.join(assets_dir, self.asset_type.file_path)
@@ -293,7 +297,7 @@ def main():
 
     add_light((0, 0, 100), 'SUN', 100)
 
-    set_output_settings(os.path.join(BASE_PATH, "out4.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(BASE_PATH, "out5.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
