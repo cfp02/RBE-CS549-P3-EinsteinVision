@@ -1,4 +1,5 @@
 .venv
 Data
-P3Data
+P3Data/Calib
+P3Data/Sequences
 P3Data.zip
