@@ -96,7 +96,7 @@ class AssetType(enum.Enum):
     FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), 1.5, None)
     SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), 1.0, None) # Probably f, or a chain gate or something, probably won't use   
     SpeedLimitSign = ("SpeedLimitSign.blend", "sign_25mph_sign_25mph", (0, 0, 0), 4.0, None)
-    TrafficLight = ("TrafficSignal.blend", "Traffic_signal1", (PI/2, 0, PI/2), 1.5, None)
+    TrafficLight = ("TrafficSignalRed.blend", "Traffic_signal1", (PI/2, 0, PI/2), 1.5, None)
     # Lane markings
 
     def __init__(self, file_path, obj_name, default_rotation, default_scaling, texture_path):
@@ -276,7 +276,7 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController('data3.json')
+    asset_controller = AssetController('data2.json')
     asset_controller.place_first_frame()
         
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
@@ -289,7 +289,7 @@ def main():
 
     add_light((0, 0, 100), 'SUN', 100)
 
-    set_output_settings(os.path.join(BASE_PATH, "out6.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(BASE_PATH, "out1.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
