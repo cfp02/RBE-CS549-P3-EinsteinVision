@@ -335,6 +335,31 @@ def create_traffic_lane(points: list[mathutils.Vector], which_lane=0):
     bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={"value":(1, 0, 0)})
     bpy.ops.object.mode_set(mode='OBJECT')
 
+    return curve_obj
+
+
+def create_and_apply_texture_material(lane_object, texture_path):
+    # Create a new material
+    mat = bpy.data.materials.new(name="LaneMaterial")
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes.get('Principled BSDF')
+
+    # Create an Image Texture node and load the texture
+    tex_image = mat.node_tree.nodes.new('ShaderNodeTexImage')
+    tex_image.image = bpy.data.images.load(texture_path)
+
+    # Connect the Image Texture node to the Base Color of the Principled BSDF
+    mat.node_tree.links.new(bsdf.inputs['Base Color'], tex_image.outputs['Color'])
+
+    mat.node_tree.links.new(bsdf.inputs['Alpha'], tex_image.outputs['Alpha'])
+    mat.blend_method = 'BLEND' 
+
+    # Assign the material to the object
+    if len(lane_object.data.materials):
+        lane_object.data.materials[0] = mat  # Replace the first material
+    else:
+        lane_object.data.materials.append(mat)  # Add new material
+
 
 
 def main():
@@ -363,9 +388,9 @@ def main():
     add_light((0, 0, 100), 'SUN', 100)
     add_light((0, 0, 0), 'SUN', 40)
 
-    points = [(0, 0, 0), (0, -2, 0), (1, -8, 0)]
-    create_traffic_lane([mathutils.Vector(point) for point in points], 0)
-
+    points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
+    lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
+    # create_and_apply_texture_material(lane, os.path.join(ASSETS_DIR, "DashedLine.png"))
 
 
 
