@@ -307,6 +307,36 @@ def add_light(location=(0, 0, 0), light_type='POINT', energy=1000):
 
     return light
 
+def create_traffic_lane(points: list[mathutils.Vector], which_lane=0):
+    curve_data = bpy.data.curves.new(name='lane' + str(which_lane), type='CURVE')
+    curve_data.dimensions = '3D'
+
+    # Create a spline
+    spline = curve_data.splines.new('BEZIER')
+    spline.bezier_points.add(len(points) - 1)
+
+    for i, point in enumerate(points):
+        spline.bezier_points[i].co = point
+        spline.bezier_points[i].handle_left_type = 'AUTO'
+        spline.bezier_points[i].handle_right_type = 'AUTO'
+
+    curve_obj = bpy.data.objects.new('lane_object' + str(which_lane), curve_data)
+    bpy.context.collection.objects.link(curve_obj)
+
+    bpy.context.view_layer.objects.active = curve_obj
+    curve_obj.select_set(True)
+
+    # Make the curve a mesh
+    bpy.ops.object.convert(target='MESH')
+
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    #Thicken
+    bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={"value":(1, 0, 0)})
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+
 def main():
     
     clear_scene()
@@ -332,6 +362,12 @@ def main():
 
     add_light((0, 0, 100), 'SUN', 100)
     add_light((0, 0, 0), 'SUN', 40)
+
+    points = [(0, 0, 0), (0, -2, 0), (1, -8, 0)]
+    create_traffic_lane([mathutils.Vector(point) for point in points], 0)
+
+
+
 
     set_output_settings(os.path.join(BASE_PATH, "out6.png"), frame_start=1, frame_end=1)
     print("Output settings set")
