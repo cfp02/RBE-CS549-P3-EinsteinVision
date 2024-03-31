@@ -3,7 +3,7 @@
         "frame": 0,
         "objects": [
             {
-                "type": "car",
+                "type": "bicycle",
                 "location": [
                     -0.4173411525195974,
                     0.13071974818472878,
@@ -17,7 +17,7 @@
                 "scaling": 1
             },
             {
-                "type": "car",
+                "type": "motorcycle",
                 "location": [
                     0.00602014639160052,
                     0.133719414376694,
@@ -45,7 +45,7 @@
                 "scaling": 1
             },
             {
-                "type": "car",
+                "type": "PickupTruck",
                 "location": [
                     -0.356134288458225,
                     0.20187757522588545,
@@ -59,7 +59,7 @@
                 "scaling": 1
             },
             {
-                "type": "traffic light",
+                "type": "motorcycle",
                 "location": [
                     -0.4772612572002781,
                     -0.3427710016702555,

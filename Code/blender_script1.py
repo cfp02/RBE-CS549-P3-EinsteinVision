@@ -69,6 +69,10 @@ class AssetController:
                 asset_type = AssetType.PickupTruck
             case "Truck" | 'truck':
                 asset_type = AssetType.Truck
+            case "Bicycle" | 'bicycle':
+                asset_type = AssetType.Bicycle
+            case "Motorcycle" | 'motorcycle':
+                asset_type = AssetType.Motorcycle
             case "StopSign" | "stop sign":
                 # asset_type = AssetType.StopSign
                 asset_type = AssetType.SpeedLimitSign
@@ -96,14 +100,11 @@ class AssetController:
 class AssetType(enum.Enum):
     # Asset types: (file_path, obj_name, default_rotation, default_translation, default_scaling, texture_path=None)
     Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), (0,0,0), .12, None)
-    SUV = ("Vehicles/SUV.blend", "SUV", (0, 0, 0), (0,0,0), .12, None)
-    PickupTruck = ("Vehicles/PickupTruck.blend", "PickupTruck", (0, 0, 0), (0,0,0), .12, None)
+    SUV = ("Vehicles/SUV.blend", "Jeep_3_", (0, 0, PI), (0, 0, 0), 20, None)
+    PickupTruck = ("Vehicles/PickupTruck.blend", "PickupTruck", (PI/2, 0, PI/2), (0,0,0), 5, None)
     Truck = ("Vehicles/Truck.blend", "Truck", (0, 0, 0), (0,0,0), .12, None)
-    Bicycle = ("Vehicles/Bicycle.blend", "Bicycle", (0, 0, 0), (0,0,0), .12, None)
-    Motorcycle = ("Vehicles/Motorcycle.blend", "Motorcycle", (0, 0, 0), (0,0,0), .12, None)
-
-
-
+    Bicycle = ("Vehicles/Bicycle.blend", "roadbike 2.0.1", (PI/2, 0, PI), (0,0,0), 0.9, None)
+    Motorcycle = ("Vehicles/Motorcycle.blend", "B_Wheel", (PI/2, 0, -PI/2), (0,0,0), .04, None)
 
     StopSign = ("StopSign.blend", "StopSign_Geo", (PI/2, 0, PI/2), (0,0,-10), 2.0, os.path.join(ASSETS_DIR, "StopSignImage.png"))
     TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (PI/2, 0, 0), (0,0,0), 10.0, None)
@@ -318,7 +319,7 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController('data1.json')
+    asset_controller = AssetController('data7.json')
     asset_controller.place_first_frame()
         
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
