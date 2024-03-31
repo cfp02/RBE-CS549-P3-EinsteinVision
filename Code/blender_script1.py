@@ -61,8 +61,14 @@ class AssetController:
         asset_type = None
         # Phase 1 includes only lanes, vehicles, pedestrians, traffic lights, stop signs
         match type_str:
-            case "Sedan" | 'car' | 'truck':
+            case "Sedan" | 'car':
                 asset_type = AssetType.Sedan
+            case "SUV":
+                asset_type = AssetType.SUV
+            case "PickupTruck":
+                asset_type = AssetType.PickupTruck
+            case "Truck" | 'truck':
+                asset_type = AssetType.Truck
             case "StopSign" | "stop sign":
                 # asset_type = AssetType.StopSign
                 asset_type = AssetType.SpeedLimitSign
@@ -88,11 +94,20 @@ class AssetController:
 
 
 class AssetType(enum.Enum):
-    # Asset types: (file_path, obj_name, default_rotation, default_scaling, default_translation, texture_path=None)
+    # Asset types: (file_path, obj_name, default_rotation, default_translation, default_scaling, texture_path=None)
     Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), (0,0,0), .12, None)
-    StopSign = ("StopSign.blend", "StopSign_Geo", (math.pi/2, 0, math.pi/2), (0,0,-10), 2.0, os.path.join(ASSETS_DIR, "StopSignImage.png"))
-    TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (math.pi/2, 0, 0), (0,0,0), 10.0, None)
-    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (math.pi/2, 0, PI), (0,0,0), .055, None)
+    SUV = ("Vehicles/SUV.blend", "SUV", (0, 0, 0), (0,0,0), .12, None)
+    PickupTruck = ("Vehicles/PickupTruck.blend", "PickupTruck", (0, 0, 0), (0,0,0), .12, None)
+    Truck = ("Vehicles/Truck.blend", "Truck", (0, 0, 0), (0,0,0), .12, None)
+    Bicycle = ("Vehicles/Bicycle.blend", "Bicycle", (0, 0, 0), (0,0,0), .12, None)
+    Motorcycle = ("Vehicles/Motorcycle.blend", "Motorcycle", (0, 0, 0), (0,0,0), .12, None)
+
+
+
+
+    StopSign = ("StopSign.blend", "StopSign_Geo", (PI/2, 0, PI/2), (0,0,-10), 2.0, os.path.join(ASSETS_DIR, "StopSignImage.png"))
+    TrafficCone = ("TrafficConeAndCylinder.blend", "absperrhut", (PI/2, 0, 0), (0,0,0), 10.0, None)
+    Pedestrian = ("Pedestrain.blend", "BaseMesh_Man_Simple", (PI/2, 0, PI), (0,0,0), .055, None)
     Dustbin = ("Dustbin.blend", "Bin_Mesh.072", (PI/2, 0, 0), (0,0,0), 10, None)
     FireHyrant = ("TrafficAssets.blend", "Circle.002", (0, 0, 0), (0,0,0), 1.5, None)
     SmallPole = ("TrafficAssets.blend", "Cylinder.001", (0, 0, 0), (0,0,0), 1.0, None) # Probably f, or a chain gate or something, probably won't use   
@@ -303,7 +318,7 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController('data3.json')
+    asset_controller = AssetController('data1.json')
     asset_controller.place_first_frame()
         
     save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
@@ -315,8 +330,9 @@ def main():
     print("Camera set to active: ", cam)
 
     add_light((0, 0, 100), 'SUN', 100)
+    add_light((0, 0, 0), 'SUN', 40)
 
-    set_output_settings(os.path.join(BASE_PATH, "out5.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(BASE_PATH, "out6.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
