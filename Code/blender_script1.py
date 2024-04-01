@@ -18,9 +18,9 @@ class AssetController:
     In charge of holding all of the Assets in the scene and managing actions related to them
     '''
 
-    def __init__(self, json_file=None):
+    def __init__(self, json_file=None, scene = 1):
         self.frames : dict[int, list[Asset]] = {}
-        json_path = os.path.join(JSON_DATA_PATH, json_file)
+        json_path = os.path.join(JSON_DATA_PATH,'scene'+str(scene), json_file)
         if json_path is not None:
             self.json_to_assets(json_path)
             # Created all assets in memory
@@ -102,7 +102,7 @@ class AssetType(enum.Enum):
     Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), (0,0,0), .12, None)
     SUV = ("Vehicles/SUV.blend", "Jeep_3_", (0, 0, PI), (0, 0, 0), 20, None)
     PickupTruck = ("Vehicles/PickupTruck.blend", "PickupTruck", (PI/2, 0, PI/2), (0,0,0), 5, None)
-    Truck = ("Vehicles/Truck.blend", "Truck", (0, 0, 0), (0,0,0), .12, None)
+    Truck = ("Vehicles/Truck.blend", "Truck", (0, 0, PI), (0,0,0), .004, None)
     Bicycle = ("Vehicles/Bicycle.blend", "roadbike 2.0.1", (PI/2, 0, PI), (0,0,0), 0.9, None)
     Motorcycle = ("Vehicles/Motorcycle.blend", "B_Wheel", (PI/2, 0, -PI/2), (0,0,0), .04, None)
 
@@ -360,7 +360,18 @@ def create_and_apply_texture_material(lane_object, texture_path):
     else:
         lane_object.data.materials.append(mat)  # Add new material
 
-
+def read_lane_data(json_file):
+    # Returns list of lanes which is a list of points
+    with open(json_file, 'r') as file:
+        data = json.load(file)
+        lanes = data['lanes']
+        return lanes
+    
+def create_traffic_lanes(lanes_data):
+    for i, lane_data in enumerate(lanes_data):
+        points = [mathutils.Vector(point) for point in lane_data['points']]
+        lane = create_traffic_lane(points, i)
+        create_and_apply_texture_material(lane, lane_data['texture_path'])
 
 def main():
     
@@ -374,10 +385,10 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController('data7.json')
+    asset_controller = AssetController(scene = 1, json_file='scene1-yolodepth2140.json')
     asset_controller.place_first_frame()
         
-    save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
+    # save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
     print("Finished creating, now rendering")
 
     cam = add_camera((0, 10, 2), (0, 0, 2))
@@ -388,13 +399,13 @@ def main():
     add_light((0, 0, 100), 'SUN', 100)
     add_light((0, 0, 0), 'SUN', 40)
 
-    points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
-    lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
+    # points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
+    # lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
     # create_and_apply_texture_material(lane, os.path.join(ASSETS_DIR, "DashedLine.png"))
 
+    create_traffic_lanes(read_lane_data(os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes2140.json")))
 
-
-    set_output_settings(os.path.join(BASE_PATH, "out6.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(BASE_PATH, "P2Scene1Last.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
