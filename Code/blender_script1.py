@@ -1,5 +1,3 @@
-import bpy # type: ignore
-import mathutils # type: ignore
 import os
 import math
 import sys
@@ -7,56 +5,97 @@ import enum
 import random
 import time
 import json
-PI = math.pi
 
+try:
+    import bpy # type: ignore
+    import mathutils # type: ignore
+except ImportError:
+    print("ImportError: This script must be run from within Blender. Functionality will be limited.")
+
+PI = math.pi
 ASSETS_DIR = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../P3Data", "Assets"))
 BASE_PATH = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../Output"))
 JSON_DATA_PATH = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath),"../JSONData"))
 
+class AssetKey(enum.Enum):
+    YOLOZOE_ASSETS = 'yolozoe-assets'
+    POSE_ASSETS = '3dpose-assets'
+    LANES = 'lanes'
+
 class AssetController:
     '''
-    In charge of holding all of the Assets in the scene and managing actions related to them
+    In charge of holding all of the Assets in the scene and managing actions related to them.
+    Holds dict of frames. Each frame contains a list of assets (created from yolo and zoedepth), a list of lanes, and assets from 3dboundingbox network which shows poses of objects
     '''
 
-    def __init__(self, json_file=None, scene = 1):
-        self.frames : dict[int, list[Asset]] = {}
-        json_path = os.path.join(JSON_DATA_PATH,'scene'+str(scene), json_file)
-        if json_path is not None:
-            self.json_to_assets(json_path)
-            # Created all assets in memory
+    def __init__(self, json_files: list[tuple[AssetKey, str]] = None, scene = 1):
+        # json_files is a list of tuples corresponding to the key and the json file path. The json file path is assumed to already be an absolute path
 
-    def place_first_frame(self):
-        self.place_assets(min(self.frames.keys()))
+        self.scene = scene # Which scene we are looking at
+        self.frames : dict[int, dict[str, list[Asset]]] = {
+        }
+        # frame: {
+        #     AssetKey.YOLOZOE_ASSETS: [],
+        #     AssetKey.POSE_ASSETS: [],
+        #     AssetKey.LANES: []
+        # }
 
+        if json_files is not None:
+            # Load all the json files into the dictionaries holding the assets
+            for key, json_file in json_files:
+                if not os.path.exists(json_file):
+                    print("Error: JSON file does not exist: ", json_file, "\n Is it an absolute path?")
+                    continue
 
-    def add_assets(self, assets, frame=0):
-        if frame not in self.frames:
-            self.frames[frame] = []
-        self.frames[frame].extend(assets)
-        # print("Added these assets: ", assets, " to frame: ", frame)
+                self.json_to_assets(json_file, key)
 
-    def place_assets(self, frame=0):
-        if frame in self.frames:
-            for asset in self.frames[frame]:
-                asset.place(asset.location, additional_rotation=asset.rotation)
+    def add_lanes(self, lanes_json_file, frame=0):
+        lanes = []
+        
+        with open(lanes_json_file, 'r') as file:
+            data = json.load(file)
+            lanes = data['lanes']
     
-    def json_to_assets(self, json_file):
+    # Converts a json file to a list of assets, adds them to the AssetController frames
+    def json_to_assets(self, json_file, asset_key: AssetKey):
         json_reader = JSONReader(json_file)
-        print(len(json_reader.data))
+        print('Size of json data: ', len(json_reader.data))
         for frame_data in json_reader.data:
-            frame = frame_data['frame']
+            frame = frame_data['frame'] # Get the frame number
             # assets = frame_data['assets']
-            assets = frame_data['objects']
+            assets = frame_data['objects']  # Get the list of assets
             asset_list = []
             for asset_json in assets:
-                # Create the asset object
+                # Create the asset object, might have to change for each AssetKey/network
                 asset = Asset(self.asset_type_from_string(asset_json['type']), 
                               location=mathutils.Vector([coord * 50 for coord in asset_json['location']]),
                               rotation=mathutils.Euler(asset_json['rotation'], 'XYZ'),
                               scaling=asset_json['scaling'])
                 asset_list.append(asset)
-            self.add_assets(asset_list, frame)
+            self.load_assets(asset_list, frame, asset_key)
 
+    # Add a list of assets to a specific frame under a specific key (from a specific network)
+    def load_assets(self, assets, asset_key: AssetKey, frame:int):
+        if frame not in self.frames:
+            self.frames[frame] = []
+        if asset_key not in self.frames[frame]:
+            self.frames[frame][asset_key] = []
+        self.frames[frame][asset_key].extend(assets)
+        print("Added these assets: ", assets, " to frame: ", frame, ' with key: ', asset_key)
+
+    def place_first_frame(self, which_assets = AssetKey.YOLOZOE_ASSETS):
+        self.place_assets(min(self.frames.keys()))
+
+    # Place all assets from in a specific frame in Blender
+    def place_assets(self, frame=0, asset_key=AssetKey.YOLOZOE_ASSETS):
+        if frame in self.frames:
+            if asset_key in self.frames[frame]:
+                for asset in self.frames[frame][asset_key]:
+                    asset.place(asset.location, additional_rotation=asset.rotation)
+        else:
+            print("No assets found for frame: ", frame)
+
+    # Determines which AssetType to use based on the string used in the input json file
     def asset_type_from_string(self, type_str):
         asset_type = None
         # Phase 1 includes only lanes, vehicles, pedestrians, traffic lights, stop signs
@@ -371,7 +410,7 @@ def create_traffic_lanes(lanes_data):
     for i, lane_data in enumerate(lanes_data):
         points = [mathutils.Vector(point) for point in lane_data['points']]
         lane = create_traffic_lane(points, i)
-        create_and_apply_texture_material(lane, lane_data['texture_path'])
+        # create_and_apply_texture_material(lane, lane_data['texture_path'])
 
 def main():
     
@@ -399,8 +438,8 @@ def main():
     add_light((0, 0, 100), 'SUN', 100)
     add_light((0, 0, 0), 'SUN', 40)
 
-    # points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
-    # lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
+    points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
+    lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
     # create_and_apply_texture_material(lane, os.path.join(ASSETS_DIR, "DashedLine.png"))
 
     create_traffic_lanes(read_lane_data(os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes2140.json")))
