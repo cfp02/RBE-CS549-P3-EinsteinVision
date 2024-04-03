@@ -9,18 +9,46 @@ import json
 try:
     import bpy # type: ignore
     import mathutils # type: ignore
+    BASE_PATH = os.path.dirname(bpy.data.filepath)
 except ImportError:
     print("ImportError: This script must be run from within Blender. Functionality will be limited.")
+    BASE_PATH = os.path.dirname(os.path.abspath(__file__))
 
 PI = math.pi
-ASSETS_DIR = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../P3Data", "Assets"))
-BASE_PATH = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath), "../Output"))
-JSON_DATA_PATH = os.path.normpath(os.path.join(os.path.dirname(bpy.data.filepath),"../JSONData"))
+ASSETS_DIR = os.path.normpath(os.path.join(BASE_PATH, "../P3Data", "Assets"))
+OUTPUT_PATH = os.path.normpath(os.path.join(BASE_PATH, "../Output"))
+JSON_DATA_PATH = os.path.normpath(os.path.join(BASE_PATH,"../JSONData"))
 
 class AssetKey(enum.Enum):
     YOLOZOE_ASSETS = 'yolozoe-assets'
-    POSE_ASSETS = '3dpose-assets'
+    CARPOSE_ASSETS = '3dcarpose-assets'
     LANES = 'lanes'
+
+    @property
+    def coordinate_scaling(self):
+        # Need to multiply by x to convert from network's arbitrary units to blender units
+        match self:
+            case AssetKey.YOLOZOE_ASSETS:
+                return 50
+            case AssetKey.CARPOSE_ASSETS:
+                return 20
+            case AssetKey.LANES:
+                return 1
+            case _:
+                return 1
+    
+    def coordinate_flip(self, location):
+        # Need to change coordinate directions for some networks
+        # Location is in the form (x, y, z)
+        match self:
+            case AssetKey.YOLOZOE_ASSETS:
+                return (-location[0], -location[2], -location[1])
+            case AssetKey.CARPOSE_ASSETS:
+                return location
+            case AssetKey.LANES:
+                return location
+            case _:
+                return location
 
 class AssetController:
     '''
@@ -43,6 +71,7 @@ class AssetController:
         if json_files is not None:
             # Load all the json files into the dictionaries holding the assets
             for key, json_file in json_files:
+                json_file = os.path.normpath(json_file)
                 if not os.path.exists(json_file):
                     print("Error: JSON file does not exist: ", json_file, "\n Is it an absolute path?")
                     continue
@@ -60,34 +89,39 @@ class AssetController:
     def json_to_assets(self, json_file, asset_key: AssetKey):
         json_reader = JSONReader(json_file)
         print('Size of json data: ', len(json_reader.data))
-        for frame_data in json_reader.data:
+        for frame_idx, frame_data in enumerate(json_reader.data):
             frame = frame_data['frame'] # Get the frame number
             # assets = frame_data['assets']
             assets = frame_data['objects']  # Get the list of assets
             asset_list = []
             for asset_json in assets:
                 # Create the asset object, might have to change for each AssetKey/network
+                # loc = mathutils.Vector([coord * 50 for coord in asset_json['location']])
+                # rot = mathutils.Euler(asset_json['rotation'], 'XYZ')
+                loc = tuple([coord * asset_key.coordinate_scaling for coord in asset_json['location']])
+                rot = tuple(asset_json['rotation'])
                 asset = Asset(self.asset_type_from_string(asset_json['type']), 
-                              location=mathutils.Vector([coord * 50 for coord in asset_json['location']]),
-                              rotation=mathutils.Euler(asset_json['rotation'], 'XYZ'),
+                              location=loc,
+                              rotation=rot,
                               scaling=asset_json['scaling'])
                 asset_list.append(asset)
-            self.load_assets(asset_list, frame, asset_key)
+            self.load_assets(asset_list, asset_key, frame)
 
     # Add a list of assets to a specific frame under a specific key (from a specific network)
     def load_assets(self, assets, asset_key: AssetKey, frame:int):
         if frame not in self.frames:
-            self.frames[frame] = []
+            self.frames[frame] = {}
         if asset_key not in self.frames[frame]:
             self.frames[frame][asset_key] = []
         self.frames[frame][asset_key].extend(assets)
-        print("Added these assets: ", assets, " to frame: ", frame, ' with key: ', asset_key)
+        print("Added", len(assets), "assets to frame: ", frame, 'with key:', asset_key)
 
-    def place_first_frame(self, which_assets = AssetKey.YOLOZOE_ASSETS):
-        self.place_assets(min(self.frames.keys()))
+    def place_first_frame(self, which_assets:AssetKey):
+        print(min(self.frames.keys()))
+        self.place_assets(frame = min(self.frames.keys()), asset_key=which_assets)
 
     # Place all assets from in a specific frame in Blender
-    def place_assets(self, frame=0, asset_key=AssetKey.YOLOZOE_ASSETS):
+    def place_assets(self, frame:int, asset_key:AssetKey):
         if frame in self.frames:
             if asset_key in self.frames[frame]:
                 for asset in self.frames[frame][asset_key]:
@@ -166,9 +200,9 @@ class AssetType(enum.Enum):
 class Asset:
     def __init__(self, asset_type: AssetType, location=None, rotation=None, scaling=None, coord_flip_correction=True):
         self.asset_type = asset_type
-        self.location = location if location is not None else mathutils.Vector((0, 0, 0))
+        self.location = location if location is not None else (0,0,0) # mathutils.Vector((0, 0, 0))
         # print("This is the location: ", self.location)
-        self.rotation = rotation if rotation is not None else self.asset_type.default_rotation
+        self.rotation = rotation if rotation is not None else (0,0,0)
         self.scaling = scaling * self.asset_type.default_scaling if scaling is not None else self.asset_type.default_scaling
         self.id = None
         self.coord_flip_correction = coord_flip_correction
@@ -179,8 +213,10 @@ class Asset:
 
         if scaling is not None:
             self.scaling = self.scaling * scaling
-        if self.coord_flip_correction:
-            self.location = mathutils.Vector((-location.x, -location.z, -location.y))
+
+
+        # TODO: Apply coordinate flip and rotations when adding them instead of here
+        self.location = mathutils.Vector(AssetKey.YOLOZOE_ASSETS.coordinate_flip(location))
         # Apply default rotation and additional rotation
         total_rotation = [d + a for d, a in zip(self.asset_type.default_rotation, additional_rotation)]
         self.rotation = mathutils.Euler(total_rotation, 'XYZ')
@@ -346,7 +382,7 @@ def add_light(location=(0, 0, 0), light_type='POINT', energy=1000):
 
     return light
 
-def create_traffic_lane(points: list[mathutils.Vector], which_lane=0):
+def create_traffic_lane(points: list, which_lane=0):
     curve_data = bpy.data.curves.new(name='lane' + str(which_lane), type='CURVE')
     curve_data.dimensions = '3D'
 
@@ -414,7 +450,7 @@ def create_traffic_lanes(lanes_data):
 
 def main():
     
-    clear_scene()
+    
     
     # # Create and place a stop sign
     # stop_sign = Asset(AssetType.StopSign)
@@ -424,8 +460,14 @@ def main():
     # create_random_cars(10)
 
     print("Creating assetcontroller")
-    asset_controller = AssetController(scene = 1, json_file='scene1-yolodepth2140.json')
-    asset_controller.place_first_frame()
+    asset_controller = AssetController(scene = 1, json_files= [
+        (AssetKey.YOLOZOE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-yolodepth2140.json')),
+        (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
+    ])
+
+    clear_scene()
+
+    asset_controller.place_first_frame(AssetKey.CARPOSE_ASSETS)
         
     # save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
     print("Finished creating, now rendering")
@@ -444,7 +486,7 @@ def main():
 
     create_traffic_lanes(read_lane_data(os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes2140.json")))
 
-    set_output_settings(os.path.join(BASE_PATH, "P2Scene1Last.png"), frame_start=1, frame_end=1)
+    set_output_settings(os.path.join(OUTPUT_PATH, "P2Scene1Last.png"), frame_start=1, frame_end=1)
     print("Output settings set")
     bpy.ops.render.render(write_still=True)
     print("Rendered image")
