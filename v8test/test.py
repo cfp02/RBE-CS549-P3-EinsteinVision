@@ -12,7 +12,7 @@ def read_video(video_path):
         ret, frame = cap.read()
         if not ret:
             break
-        yield cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        yield frame
     cap.release()
 
 def reproject(X, K, R, t):
@@ -33,23 +33,39 @@ def main():
     K_inv = np.linalg.inv(K)
 
     frames = []
-    video = read_video('P3Data/Sequences/scene5/Undist/2023-02-14_11-56-56-front_undistort.mp4')
-    # skip first 5 seconds
-    for _ in range(int(9 * 36)):
-        next(video)
+    # video = read_video('P3Data/Sequences/scene6/Undist/2023-03-03_15-31-56-front_undistort.mp4')
+    # video = read_video('P3Data/Sequences/scene5/Undist/2023-02-14_11-56-56-front_undistort.mp4')
+    video = read_video('P3Data/Sequences/scene3/Undist/2023-02-14_11-49-54-front_undistort.mp4')
+    # for _ in range(int(10 * 36)):
+    #     next(video)
     for _ in range(1):
         frame = next(video)
-        cv2.imwrite('frame.jpg', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
-        torch_frame = torch.Tensor(frame).permute(2, 0, 1).unsqueeze(0).to(DEVICE)/255.0
+        cv2.imwrite('frame.jpg', frame)
+        torch_frame = torch.Tensor(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).permute(2, 0, 1).unsqueeze(0).to(DEVICE)/255.0
         depth = zoe.infer(torch_frame)
         depth = depth.reshape(depth.shape[2], depth.shape[3]).detach().cpu().numpy()
-        yolo = model.track(frame, persist=True, tracker="botsort.yaml")[0]
+        yolo = model.track(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), persist=True, tracker="botsort.yaml")[0]
+        yolo.save('YOLOv9_with_seg.jpg')
         names = yolo.names
-        boxes = yolo.boxes.xyxy.cpu().numpy()
+        boxes = yolo.boxes.xyxy.detach().cpu().numpy()
+        classes = yolo.boxes.cls.detach().cpu().numpy()
+        masks = yolo.masks.data.detach().cpu().numpy()
         centers_img = np.stack([(boxes[:, 0] + boxes[:, 2]) / 2, (boxes[:, 1] + boxes[:, 3]) / 2, np.ones(boxes.shape[0])])
         center_rays = (K_inv @ centers_img).T
         center_rays /= np.linalg.norm(center_rays, axis=1)[:, None]
-        centers_world = depth[centers_img[1].astype(int), centers_img[0].astype(int)][:, None] * center_rays
+        # plt.imshow(depth[::2, ::2]*masks[0])
+        # plt.savefig('depth.jpg')
+        medians = np.array([
+            np.median(depth[::2, ::2][masks[i].nonzero()])
+            for i in range(masks.shape[0])
+        ])[:, None]
+        for i in range(classes.shape[0]):
+            if names[classes[i]] == 'car':
+                medians[i] += 1 # account for depth of car
+            if names[classes[i]] == 'truck':
+                medians[i] += 1.5 # account for depth of truck
+
+        centers_world = medians * center_rays
         classes = [names[int(i)] for i in yolo.boxes.cls]
         frames.append({
             'objects': [
