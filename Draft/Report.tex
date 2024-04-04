@@ -1,0 +1,55 @@
+\documentclass[conference]{IEEEtran}
+% *** CITATION PACKAGES ***
+\usepackage[
+style=ieee
+]{biblatex}
+\addbibresource{report.bib} %Imports bibliography file
+
+% *** FLOAT PACKAGES ***
+\usepackage{float}
+
+% *** GRAPHICS RELATED PACKAGES ***
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% *** MATH PACKAGES ***
+\usepackage{amsmath}
+
+% *** PDF, URL AND HYPERLINK PACKAGES ***
+\usepackage{url}
+
+\begin{document}
+\title{
+  RBE/CS 549 Project 2\\
+   Structure from Motion and NeRF \\
+  \vspace{0.3cm}
+  \large{\textit{Using 2 Late Days}}
+}
+
+\author{\IEEEauthorblockN{Blake Bruell}
+\IEEEauthorblockA{Worcester Polytechnic Institute\\
+babruell@wpi.edu} \and
+\IEEEauthorblockN{Cole Parks}
+\IEEEauthorblockA{Worcester Polytechnic Institute\\
+cparks@wpi.edu}}
+
+% make the title area
+\maketitle
+
+\begin{abstract}
+This report outlines the process of creating a 3D visualization of a driving scene from a monocular forward facing camera view. The process is broken down into three phases, each of which encompass a certain set of target goals. Techiques were explored and impemented to detect lane lines, detect objects in the scene, localize objects in 3d space, and create a 3D visualization of the scene using Blender. The report also discusses the challenges faced and the results obtained from the implementation of the techniques.
+\end{abstract}
+
+\input{Phase1.tex}
+
+\input{Phase2.tex}
+
+\input{Phase3.tex}
+
+\input{Reflection.tex}
+
+\printbibliography
+
+\
+\end{document}
