@@ -31,9 +31,9 @@ class AssetKey(enum.Enum):
             case AssetKey.YOLOZOE_ASSETS:
                 return 50
             case AssetKey.CARPOSE_ASSETS:
-                return .005
+                return 5
             case AssetKey.LANES:
-                return 10
+                return 8
             case _:
                 return 1
     
@@ -45,9 +45,9 @@ class AssetKey(enum.Enum):
             case AssetKey.YOLOZOE_ASSETS:
                 return (-x, -z, -y)  #(-location[0], -location[2], -location[1])
             case AssetKey.CARPOSE_ASSETS:
-                return (x, -1/z, y)
+                return (x, -z, y)
             case AssetKey.LANES:
-                return (-x, -z, -y)
+                return (-x, -z, -y+5)
             case _:
                 return location
             
@@ -189,7 +189,7 @@ class AssetType(enum.Enum):
     Sedan = ("Vehicles/SedanAndHatchback.blend", "Car", (0, 0, 0), (0,0,0), .12, None)
     SUV = ("Vehicles/SUV.blend", "Jeep_3_", (0, 0, PI), (0, 0, 0), 20, None)
     PickupTruck = ("Vehicles/PickupTruck.blend", "PickupTruck", (PI/2, 0, PI/2), (0,0,0), 5, None)
-    Truck = ("Vehicles/Truck.blend", "Truck", (0, 0, PI), (0,0,0), .004, None)
+    Truck = ("Vehicles/Truck.blend", "Truck", (0, 0, PI), (0,0,0), .005, None)
     Bicycle = ("Vehicles/Bicycle.blend", "roadbike 2.0.1", (PI/2, 0, PI), (0,0,0), 0.9, None)
     Motorcycle = ("Vehicles/Motorcycle.blend", "B_Wheel", (PI/2, 0, -PI/2), (0,0,0), .04, None)
 
@@ -476,40 +476,32 @@ def create_traffic_lanes(lanes_data):
         lane = create_traffic_lane(points, i)
         # create_and_apply_texture_material(lane, lane_data['texture_path'])
 
-def main():
+def create_one_frame(frame_idx, scene = 1):
 
     print("Creating assetcontroller")
     asset_controller = AssetController(scene = 1, json_files= [
         (AssetKey.YOLOZOE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-yolodepth2140.json')),
         # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
-        # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene5/scene5-carposes170.json')),
     ])
 
     clear_scene()
 
     asset_controller.place_first_frame(AssetKey.YOLOZOE_ASSETS)
         
-    # save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
-    print("Finished creating, now rendering")
-
     cam = add_camera((0, 10, 2), (0, 0, 2))
-    print("Camera added: ", cam)
     set_active_camera(cam.name)
-    print("Camera set to active: ", cam)
 
     add_light((0, 0, 100), 'SUN', 100)
     add_light((0, 0, 0), 'SUN', 40)
 
-    # points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
-    # lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
-    # create_and_apply_texture_material(lane, os.path.join(ASSETS_DIR, "DashedLine.png"))
-
     create_traffic_lanes(read_lane_data(os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes2140.json")))
 
     set_output_settings(os.path.join(OUTPUT_PATH, "P2Scene1Last.png"), frame_start=1, frame_end=1)
-    print("Output settings set")
     bpy.ops.render.render(write_still=True)
-    print("Rendered image")
+
+def main():
+
+    create_one_frame(2140)
 
 if __name__ == "__main__":
     main()
