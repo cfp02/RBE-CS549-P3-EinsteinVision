@@ -31,24 +31,38 @@ class AssetKey(enum.Enum):
             case AssetKey.YOLOZOE_ASSETS:
                 return 50
             case AssetKey.CARPOSE_ASSETS:
-                return 20
+                return .005
             case AssetKey.LANES:
-                return 1
+                return 10
             case _:
                 return 1
     
-    def coordinate_flip(self, location):
+    def coordinate_flip(self, location:tuple):
         # Need to change coordinate directions for some networks
         # Location is in the form (x, y, z)
+        x, y, z = location
         match self:
             case AssetKey.YOLOZOE_ASSETS:
-                return (-location[0], -location[2], -location[1])
+                return (-x, -z, -y)  #(-location[0], -location[2], -location[1])
             case AssetKey.CARPOSE_ASSETS:
-                return location
+                return (x, -1/z, y)
             case AssetKey.LANES:
-                return location
+                return (-x, -z, -y)
             case _:
                 return location
+            
+    def rotation_flip(self, rotation):
+        # Need to change coordinate directions for some networks
+        # Rotation is in the form (x, y, z)
+        match self:
+            case AssetKey.YOLOZOE_ASSETS:
+                return rotation
+            case AssetKey.CARPOSE_ASSETS:
+                return rotation #(rotation[0], rotation[1], -rotation[2])
+            case AssetKey.LANES:
+                return rotation
+            case _:
+                return rotation
 
 class AssetController:
     '''
@@ -125,7 +139,7 @@ class AssetController:
         if frame in self.frames:
             if asset_key in self.frames[frame]:
                 for asset in self.frames[frame][asset_key]:
-                    asset.place(asset.location, additional_rotation=asset.rotation)
+                    asset.place(asset.location, additional_rotation=asset.rotation, asset_key=asset_key)
         else:
             print("No assets found for frame: ", frame)
 
@@ -208,7 +222,7 @@ class Asset:
         self.coord_flip_correction = coord_flip_correction
         print("Created Asset of type: ", asset_type)
 
-    def place(self, location, assets_dir = ASSETS_DIR, additional_rotation=(0, 0, 0), scaling=None):
+    def place(self, location, assets_dir = ASSETS_DIR, additional_rotation=(0, 0, 0), scaling=None, asset_key:AssetKey=None):
         self.location = location
 
         if scaling is not None:
@@ -216,7 +230,8 @@ class Asset:
 
 
         # TODO: Apply coordinate flip and rotations when adding them instead of here
-        self.location = mathutils.Vector(AssetKey.YOLOZOE_ASSETS.coordinate_flip(location))
+        self.location = mathutils.Vector(asset_key.coordinate_flip(location))
+        # additional_rotation = AssetKey.YOLOZOE_ASSETS.rotation_flip(additional_rotation)
         # Apply default rotation and additional rotation
         total_rotation = [d + a for d, a in zip(self.asset_type.default_rotation, additional_rotation)]
         self.rotation = mathutils.Euler(total_rotation, 'XYZ')
@@ -437,37 +452,42 @@ def create_and_apply_texture_material(lane_object, texture_path):
 
 def read_lane_data(json_file):
     # Returns list of lanes which is a list of points
+    # Each lane is a list of points in the form [x, y, z] but should be list[tuple[float, float, float]]
+    a = AssetKey.LANES
     with open(json_file, 'r') as file:
-        data = json.load(file)
-        lanes = data['lanes']
-        return lanes
+        data = json.load(file)[0]
+        print("Data: ", data)
+        json_lanes = data['lanes']
+
+    lanes = []
+    for l in json_lanes:
+        lane = []
+        for point in l:
+            point = ((a.coordinate_scaling *p) for p in point)
+            point = a.coordinate_flip(point)
+            point = tuple(point)
+            lane.append(point)
+        lanes.append(list(lane))
+    return lanes
     
 def create_traffic_lanes(lanes_data):
     for i, lane_data in enumerate(lanes_data):
-        points = [mathutils.Vector(point) for point in lane_data['points']]
+        points = [mathutils.Vector(point) for point in lane_data]
         lane = create_traffic_lane(points, i)
         # create_and_apply_texture_material(lane, lane_data['texture_path'])
 
 def main():
-    
-    
-    
-    # # Create and place a stop sign
-    # stop_sign = Asset(AssetType.StopSign)
-    # stop_sign.place(mathutils.Vector((-2, -2, 0)), additional_rotation=(0,0,0))
-
-    # create_all_assets()
-    # create_random_cars(10)
 
     print("Creating assetcontroller")
     asset_controller = AssetController(scene = 1, json_files= [
         (AssetKey.YOLOZOE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-yolodepth2140.json')),
-        (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
+        # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
+        # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene5/scene5-carposes170.json')),
     ])
 
     clear_scene()
 
-    asset_controller.place_first_frame(AssetKey.CARPOSE_ASSETS)
+    asset_controller.place_first_frame(AssetKey.YOLOZOE_ASSETS)
         
     # save_scene(os.path.join(ASSETS_DIR, "..", "script_test.blend"))
     print("Finished creating, now rendering")
@@ -480,8 +500,8 @@ def main():
     add_light((0, 0, 100), 'SUN', 100)
     add_light((0, 0, 0), 'SUN', 40)
 
-    points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
-    lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
+    # points = [(0, 0, 0), (0, -2, 0), (1, -8, 0), (2, -30, 0), (3, -40, 1), (4, -50, 0)]
+    # lane = create_traffic_lane([mathutils.Vector(point) for point in points], 0)
     # create_and_apply_texture_material(lane, os.path.join(ASSETS_DIR, "DashedLine.png"))
 
     create_traffic_lanes(read_lane_data(os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes2140.json")))
