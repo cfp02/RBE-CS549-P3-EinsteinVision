@@ -6,22 +6,22 @@ Some techniques for object detection, such as described in \emph{3D Bounding Box
 
 The obvious choice, then was to use a information from multiple different networks, each providing some needed information. At the bare minimum, two networks would be needed: one to detect objects, and one to predict depth. Our team chose solutions which were easy to get running, as we wanted to focus on getting outputs from the networks as quickly as possible. To this end, we elected to use the YoloV9 framework \cite{YOLOv9}, due to its outstanding performance, and also ease of use due to the fantastic Ultralytrics framework for YOLO models. The output of the YOLO model is shown in Figure \ref{fig:yolo_output}.
 
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=0.5\textwidth]{images/yolo_output.png}
-%     \caption{Output of YOLO model}
-%     \label{fig:yolo_output}
-% \end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.95\linewidth]{images/YOLOv9.jpg}
+    \caption{Output of YOLO model}
+    \label{fig:yolo_output}
+\end{figure}
 
 \subsection{Depth Estimation}
 For depth estimation, there are many different techniques available. One technique in particular stuck out in the early research that our team did, namely ZoeDepth \cite{ZoeDepth}. ZoeDepth is monocular metric depth estimation technique which builds upon the MiDaS architecture. The ZoeDepth model is trained on both indoor and outdoor scenes, and is able to generalize very well. ZoeDepth also had the distinct advnatage of being setup to be run via TorchHub, a online repository of networks. As such, getting the network running, and integrating it into the existing YOLO pipeline was much easier. The output of the ZoeDepth model is shown in Figure \ref{fig:zoe_depth_output}.
 
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=0.5\textwidth]{images/zoe_depth_output.png}
-%     \caption{Output of ZoeDepth model}
-%     \label{fig:zoe_depth_output}
-% \end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=0.95\linewidth]{images/depth.jpg}
+    \caption{Output of ZoeDepth model}
+    \label{fig:zoe_depth_output}
+\end{figure}
 
 \subsection{3D Localization}
 Once the outputs from YOLOv9 and ZoeDepth were obtained, the next step was to localize the objects in 3D space. This was done by first taking the center of each bounding box, and then using the depth map to get the depth of the object at the center of the bounding box. The pinhole projection model was then used to get the 3D coordinates of the object.
@@ -78,12 +78,23 @@ This pipeline was very effective, but it was limited by the fact that the ZoeDep
 
 The benifit of this pipeline is that is simple, fast, and applies for all classes of objects that the YOLO model can detect. The downside is that the 3D localization is not perfect, and no information about orientation is provided.
 
-% \begin{figure}
-%     \centering
-%     \includegraphics[width=0.5\textwidth]{images/3D_localization_output.png}
-%     \caption{Output of 3D localization}
-%     \label{fig:3D_localization_output}
-% \end{figure}
+\subsection{3D Rendering}
+Finally, to 3D render the scene, a json datastucture was created which contained the 3D cooridates and class of each detected object. This json file was then read in by a Blender python script which placed each object in the scene at the correct location. The output of the 3D rendering is shown in Figure \ref{fig:3D_rendering_output}.
+\begin{figure}
+    \centering
+    \begin{subfigure}{0.95\linewidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/localization_in.jpg}
+        \caption{Input image to pipeline.}
+    \end{subfigure}
+    \begin{subfigure}{0.95\linewidth}
+        \centering
+        \includegraphics[width=\textwidth]{images/localization.png}
+        \caption{Output of 3D localization.}
+    \end{subfigure}
+    \caption{3D localization of objects.}
+    \label{fig:3D_localization_output}
+\end{figure}
 
 \subsection{Lane Detection}
 There were many choices for lane detection, but we sought to use a technique which gave 3D lane outputs directly. We found many such powerful tecniques, such as BEV-LaneDet \cite{BEV-LaneDet} and PersFormer \cite{PersFormer}, but we ran into some serious challenges with getting these networks running. In both cases, the code was publicly available on GitHub, but dependencies were not well documented, and when documented were often many years out of date, making it difficult to setup the environment to run the network. In some cases pretrained weights were missing, making it difficult to run the test the network, or simply prohibitively expensive to train the network. In many cases, the networks were only setup to be trained and validated on datasets, and not to perform inference on new data. As a result, we were unable to get these networks running in time for the first phase of the project.

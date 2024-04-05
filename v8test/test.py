@@ -3,6 +3,7 @@ import numpy as np
 from ultralytics import YOLO
 import torch
 import json
+import matplotlib.pyplot as plt
 
 #zoe model needs timm==0.6.5
 
@@ -25,6 +26,7 @@ K = np.array([
 
 def main():
     model = YOLO('yolov9e.pt')
+    pose = YOLO('yolov8x-pose.pt')
     # model_zoe_nk = torch.hub.load(repo, "ZoeD_NK", pretrained=True) # Could be faster?
     model_zoe_k = torch.hub.load("isl-org/ZoeDepth", "ZoeD_K", pretrained=True)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -35,17 +37,20 @@ def main():
     frames = []
     # video = read_video('P3Data/Sequences/scene6/Undist/2023-03-03_15-31-56-front_undistort.mp4')
     # video = read_video('P3Data/Sequences/scene5/Undist/2023-02-14_11-56-56-front_undistort.mp4')
-    video = read_video('P3Data/Sequences/scene3/Undist/2023-02-14_11-49-54-front_undistort.mp4')
-    # for _ in range(int(10 * 36)):
-    #     next(video)
+    # video = read_video('P3Data/Sequences/scene3/Undist/2023-02-14_11-49-54-front_undistort.mp4')
+    video = read_video("P3Data/Sequences/scene5/Undist/2023-02-14_11-56-56-front_undistort.mp4")
+    for _ in range(int(8 * 36)):
+        next(video)
     for _ in range(1):
         frame = next(video)
         cv2.imwrite('frame.jpg', frame)
         torch_frame = torch.Tensor(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).permute(2, 0, 1).unsqueeze(0).to(DEVICE)/255.0
         depth = zoe.infer(torch_frame)
         depth = depth.reshape(depth.shape[2], depth.shape[3]).detach().cpu().numpy()
-        yolo = model.track(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), persist=True, tracker="botsort.yaml")[0]
-        yolo.save('YOLOv9_with_seg.jpg')
+        plt.imshow(depth)
+        plt.savefig('depth.jpg')
+        yolo = model.track(frame, persist=True, tracker="botsort.yaml")[0]
+        yolo.save('YOLOv9.jpg')
         names = yolo.names
         boxes = yolo.boxes.xyxy.detach().cpu().numpy()
         classes = yolo.boxes.cls.detach().cpu().numpy()
