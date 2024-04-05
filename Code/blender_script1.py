@@ -647,6 +647,11 @@ def create_all_frames(asset_controller: AssetController, startframe = 1, endfram
 
         create_one_frame(frame, asset_controller, output_folder, scene, this_frame_lanes)
 
+def create_asset_controller(scene):
+    assets_path = os.path.join(JSON_DATA_PATH, "scene" + str(scene), "scene" + str(scene) + "_assets.json")
+    lane_path = os.path.join(JSON_DATA_PATH, "scene" + str(scene), "scene" + str(scene) + "_lanes.json")
+    asset_controller = AssetController(json_files=[(AssetKey.YOLOZOE_ASSETS, assets_path)], lane_json=lane_path, scene=scene)
+    return asset_controller
 
 def main():
 
@@ -660,8 +665,12 @@ def main():
         # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
     ], lane_json = os.path.join(JSON_DATA_PATH, "scene2", "scene2_lanes.json")
     )
+    
     # create_one_frame(2140, asset_controller, OUTPUT_PATH)
-    create_all_frames(asset_controller2, startframe=1, endframe=-1, every_n_frames=6, scene=2, lanes = True)
+    # create_all_frames(asset_controller2, startframe=1, endframe=-1, every_n_frames=6, scene=2, lanes = True)
+
+    a3 = create_asset_controller(3)
+    create_all_frames(a3, startframe=1, endframe=-1, every_n_frames=6, scene=3, lanes = True)
 
 if __name__ == "__main__":
     main()
