@@ -1,5 +1,7 @@
+import glob
 import cv2
 import numpy as np
+from tqdm import tqdm
 from ultralytics import YOLO
 import torch
 import json
@@ -25,41 +27,59 @@ K = np.array([
     [0, 0, 0.0010]]) * 1e3
 
 def main():
-    model = YOLO('yolov9e.pt')
-    pose = YOLO('yolov8x-pose.pt')
-    # model_zoe_nk = torch.hub.load(repo, "ZoeD_NK", pretrained=True) # Could be faster?
+    model = YOLO('yolov9e-seg.pt')
     model_zoe_k = torch.hub.load("isl-org/ZoeDepth", "ZoeD_K", pretrained=True)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
     zoe = model_zoe_k.to(DEVICE)
 
     K_inv = np.linalg.inv(K)
 
+
+    video_num = 1
+    video_path = glob.glob(f'P3Data/Sequences/scene{video_num}/Undist/*front*.mp4')[0]
+    video = read_video(video_path)
+    skip_seconds = 0
+    max_frames = None
+    frame_interval = 6
+
     frames = []
-    # video = read_video('P3Data/Sequences/scene6/Undist/2023-03-03_15-31-56-front_undistort.mp4')
-    # video = read_video('P3Data/Sequences/scene5/Undist/2023-02-14_11-56-56-front_undistort.mp4')
-    # video = read_video('P3Data/Sequences/scene3/Undist/2023-02-14_11-49-54-front_undistort.mp4')
-    video = read_video("P3Data/Sequences/scene5/Undist/2023-02-14_11-56-56-front_undistort.mp4")
-    for _ in range(int(8 * 36)):
+    for _ in range(int(skip_seconds * 36)):
         next(video)
-    for _ in range(1):
-        frame = next(video)
-        cv2.imwrite('frame.jpg', frame)
+    frame_num = 0
+    for frame in tqdm(video):
+        frame_num += 1
+        if frame_num % frame_interval - 1 != 0:
+            continue
+        if max_frames is not None and frame_num > (max_frames + skip_seconds * 36):
+            break
+        yolo = model(frame)[0] #, persist=True, tracker="botsort.yaml")[0]
+        if len(yolo.boxes) == 0:
+            frames.append({
+                'frame': frame_num,
+                'objects': []
+            })
+            continue
         torch_frame = torch.Tensor(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).permute(2, 0, 1).unsqueeze(0).to(DEVICE)/255.0
         depth = zoe.infer(torch_frame)
+        # extract useful information from network outputs
         depth = depth.reshape(depth.shape[2], depth.shape[3]).detach().cpu().numpy()
-        plt.imshow(depth)
-        plt.savefig('depth.jpg')
-        yolo = model.track(frame, persist=True, tracker="botsort.yaml")[0]
-        yolo.save('YOLOv9.jpg')
         names = yolo.names
         boxes = yolo.boxes.xyxy.detach().cpu().numpy()
         classes = yolo.boxes.cls.detach().cpu().numpy()
         masks = yolo.masks.data.detach().cpu().numpy()
+        
+        # save images for debugging and paper
+        # cv2.imwrite('frame.jpg', frame)
+        # plt.imshow(depth)
+        # plt.savefig('depth.jpg')
+        # yolo.save('YOLOv9.jpg')
+        # plt.imshow(depth[::2, ::2]*masks[0])
+        # plt.savefig('depth.jpg')
+        
+        # calculate 3D locations of objects
         centers_img = np.stack([(boxes[:, 0] + boxes[:, 2]) / 2, (boxes[:, 1] + boxes[:, 3]) / 2, np.ones(boxes.shape[0])])
         center_rays = (K_inv @ centers_img).T
         center_rays /= np.linalg.norm(center_rays, axis=1)[:, None]
-        # plt.imshow(depth[::2, ::2]*masks[0])
-        # plt.savefig('depth.jpg')
         medians = np.array([
             np.median(depth[::2, ::2][masks[i].nonzero()])
             for i in range(masks.shape[0])
@@ -73,6 +93,7 @@ def main():
         centers_world = medians * center_rays
         classes = [names[int(i)] for i in yolo.boxes.cls]
         frames.append({
+            'frame': frame_num,
             'objects': [
                 {
                     'type': classes[i],
@@ -84,8 +105,8 @@ def main():
             ]
         })
     
-    with open('output.json', 'w') as f:
-        json.dump(frames, f, indent=4)
+    with open(f'scene{video_num}_assets.json', 'w') as f:
+        json.dump(frames, f)
 
 
 if __name__ == '__main__':
