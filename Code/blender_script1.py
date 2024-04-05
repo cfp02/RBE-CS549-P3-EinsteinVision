@@ -125,7 +125,10 @@ class AssetController:
                 # rot = mathutils.Euler(asset_json['rotation'], 'XYZ')
                 loc = tuple([coord * asset_key.coordinate_scaling for coord in asset_json['location']])
                 rot = tuple(asset_json['rotation'])
-                asset = Asset(self.asset_type_from_string(asset_json['type']), 
+                asset_type = self.asset_type_from_string(asset_json['type'])
+                if asset_type == None:
+                    continue
+                asset = Asset(asset_type=asset_type, 
                               location=loc,
                               rotation=rot,
                               scaling=asset_json['scaling'])
@@ -190,7 +193,7 @@ class AssetController:
                 asset_type = AssetType.TrafficLight
             case _:
                 print("Asset type not recognized. You're gonna be a fire hydrant! --", type_str)
-                asset_type = AssetType.FireHyrant
+                asset_type = None
 
         return asset_type
 

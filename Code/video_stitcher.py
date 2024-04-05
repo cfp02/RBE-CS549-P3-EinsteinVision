@@ -39,7 +39,7 @@ if __name__ == "__main__":
         image_folder = os.path.join(BASE_PATH, '../', 'Output', 'scene' + str(scene), 'scene' + str(scene) + 'run' + str(run))
         output_folder = os.path.abspath(os.path.join(BASE_PATH, '../', 'Output', 'scene' + str(scene)))
         video_name = 'scene' + str(scene) + 'run' + str(run) + '.mp4'
-        fps = 5
+        fps = 6
     else:
         image_folder = sys.argv[1]
         video_name = sys.argv[2]
