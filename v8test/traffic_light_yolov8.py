@@ -6,6 +6,7 @@ import json
 import os
 
 BASE_PATH = os.path.dirname(os.path.abspath(__file__))
+print(BASE_PATH)
 
 #zoe model needs timm==0.6.5
 
@@ -30,11 +31,13 @@ K = np.array([
 
 def train_traffic_light():
     model_traffic_light_yolov8 = YOLO('yolov8n.pt') # Small model for traffic lights
+    # model_traffic_light_yolov8 = YOLO('yolov9e.pt') # Small model for traffic lights
+
     traffic_light_dataset_yaml = os.path.normpath(os.path.join(BASE_PATH, '../P3Data/Datasets/Red-Green-Yellow.v1i.yolov8/data.yaml'))
     # print(os.path.exists(traffic_light_dataset_yaml))
 
     traffic_light_model = model_traffic_light_yolov8.train(data=traffic_light_dataset_yaml, epochs=5)
-    traffic_light_model.save(os.path.abspath(os.path.join(BASE_PATH, '../traffic_light_model2.pt')))
+    traffic_light_model.save(os.path.abspath(os.path.join(BASE_PATH, '../traffic_light_model4.pt')))
     return traffic_light_model
 
 def cut_traffic_light_boxes(boxes: list[list], frames, tl_model: YOLO):
@@ -93,14 +96,20 @@ def cut_traffic_light_boxes(boxes: list[list], frames, tl_model: YOLO):
             
 
         # Concatenate and show all traffic lights in the frame
-        if bbox_images and len(bbox_images) > 1 and False:
+        if bbox_images and len(bbox_images) > 1 and True:
             max_height = max(image.shape[0] for image in bbox_images)
             bbox_images = [cv2.resize(image, (image.shape[1], max_height)) for image in bbox_images]
 
             # Concatenate and show all traffic lights in the frame
             result_image = np.concatenate(bbox_images, axis=1)
             cv2.imshow('Traffic lights', cv2.cvtColor(result_image, cv2.COLOR_RGB2BGR))
-            if cv2.waitKey() == ord('q'):
+            key = cv2.waitKey()
+            if  key == ord('s'):
+                # Save result image
+                cv2.imwrite('traffic_lights_concat.jpg', cv2.cvtColor(result_image, cv2.COLOR_RGB2BGR))
+                # Save frame without bounding boxes
+                cv2.imwrite('traffic_lights_frame.jpg', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            elif key == ord('q'):
                 cv2.destroyAllWindows()
                 return
             cv2.destroyAllWindows()
@@ -134,7 +143,7 @@ def cut_traffic_light_boxes(boxes: list[list], frames, tl_model: YOLO):
 
 def main():
     
-    zoe_bool, yolov9_bool, traffic_light_bool = True, True, False
+    zoe_bool, yolov9_bool, traffic_light_bool = False, True, True
     
     model = YOLO('yolov9e.pt') if yolov9_bool else None
     # model_zoe_nk = torch.hub.load(repo, "ZoeD_NK", pretrained=True) # Could be faster?
@@ -151,7 +160,8 @@ def main():
     # video = read_video('P3Data/Sequences/scene5/Undist/2023-02-14_11-56-56-front_undistort.mp4')
 
     #Trafic light video 
-    video_path = 'P3Data/Sequences/scene1/Undist/2023-02-14_11-04-07-front_undistort.mp4'
+    # video_path = 'P3Data/Sequences/scene1/Undist/2023-02-14_11-04-07-front_undistort.mp4'
+    video_path = 'P3Data/Sequences/scene3/Undist/2023-02-14_11-49-54-front_undistort.mp4'
     #'P3Data/Sequences/scene3/Undist/2023-02-14_11-49-54-front_undistort.mp4'
     video = read_video(video_path)
     # video = read_video('P3Data/Sequences/scene6/Undist/2023-03-03_15-31-56-front_undistort.mp4')
@@ -184,7 +194,17 @@ def main():
             # yolo = model.track(frame, persist=True, tracker="botsort.yaml")[0]
             yolo = model(frame)[0]
             names = yolo.names
+            # print(names)
             boxes = yolo.boxes.xyxy.cpu().numpy()
+            print((c, 'at ', box_coords) for c, box_coords in zip(names, boxes))
+            # Show the frame with bounding boxes
+            # for box in boxes:
+            #     box = box.astype(int)
+            #     cv2.rectangle(frame, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 2)
+            # cv2.imshow('Frame', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+            # if cv2.waitKey(1) == ord('q'):
+            #     cv2.destroyAllWindows()
+            #     break
             # print(boxes)
 
         if traffic_light_bool and False:
@@ -213,10 +233,11 @@ def main():
             tl_boxes_this_frame = np.array(tl_boxes_this_frame)
             tl_boxes.append(tl_boxes_this_frame)
             print("Len boxes", len(tl_boxes_this_frame), "---", tl_boxes_this_frame, '---', len(tl_frames))
+            
 
             cut_traffic_light_boxes(tl_boxes, tl_frames, traffic_light_model)
 
-        # continue
+        continue
 
         frames.append({
             'frame': frame_idx,

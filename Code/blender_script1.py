@@ -5,6 +5,9 @@ import enum
 import random
 import time
 import json
+import time
+import subprocess
+# import cv2
 
 try:
     import bpy # type: ignore
@@ -70,7 +73,7 @@ class AssetController:
     Holds dict of frames. Each frame contains a list of assets (created from yolo and zoedepth), a list of lanes, and assets from 3dboundingbox network which shows poses of objects
     '''
 
-    def __init__(self, json_files: list[tuple[AssetKey, str]] = None, scene = 1):
+    def __init__(self, json_files: list[tuple[AssetKey, str]] = None, lane_json:str = "", scene = 1):
         # json_files is a list of tuples corresponding to the key and the json file path. The json file path is assumed to already be an absolute path
 
         self.scene = scene # Which scene we are looking at
@@ -81,6 +84,7 @@ class AssetController:
         #     AssetKey.POSE_ASSETS: [],
         #     AssetKey.LANES: []
         # }
+        self.lanes_json = lane_json
 
         if json_files is not None:
             # Load all the json files into the dictionaries holding the assets
@@ -91,6 +95,13 @@ class AssetController:
                     continue
 
                 self.json_to_assets(json_file, key)
+
+        if lane_json != "":
+            lane_json = os.path.normpath(lane_json)
+            if not os.path.exists(lane_json):
+                print("Error: JSON file does not exist: ", lane_json, "\n Is it an absolute path?")
+            # else:
+            #     self.add_lanes(lane_json)
 
     def add_lanes(self, lanes_json_file, frame=0):
         lanes = []
@@ -131,7 +142,7 @@ class AssetController:
         print("Added", len(assets), "assets to frame: ", frame, 'with key:', asset_key)
 
     def place_first_frame(self, which_assets:AssetKey):
-        print(min(self.frames.keys()))
+        print("First frame idx:", min(self.frames.keys()))
         self.place_assets(frame = min(self.frames.keys()), asset_key=which_assets)
 
     # Place all assets from in a specific frame in Blender
@@ -169,7 +180,7 @@ class AssetController:
                 asset_type = AssetType.Pedestrian
             case "Dustbin":
                 asset_type = AssetType.Dustbin
-            case "FireHyrant":
+            case "FireHyrant" | 'fire hydrant':
                 asset_type = AssetType.FireHyrant
             case "SmallPole":
                 asset_type = AssetType.SmallPole
@@ -223,6 +234,7 @@ class Asset:
         print("Created Asset of type: ", asset_type)
 
     def place(self, location, assets_dir = ASSETS_DIR, additional_rotation=(0, 0, 0), scaling=None, asset_key:AssetKey=None):
+        
         self.location = location
 
         if scaling is not None:
@@ -397,13 +409,21 @@ def add_light(location=(0, 0, 0), light_type='POINT', energy=1000):
 
     return light
 
-def create_traffic_lane(points: list, which_lane=0):
+def create_traffic_lane(points: list, which_lane=0, initial_offset = (0.001,0.001,0)):
+
+    # # Add points[0] at the beginning of the list
+    # points.insert(0, mathutils.Vector((points[0].x - initial_offset[0], points[0].y - initial_offset[1], points[0].z - initial_offset[2])))
+    # # Insert points[-1] at the end of the list
+    # points.append(mathutils.Vector((points[-1].x + initial_offset[0], points[-1].y + initial_offset[1], points[-1].z + initial_offset[2])))
+
     curve_data = bpy.data.curves.new(name='lane' + str(which_lane), type='CURVE')
     curve_data.dimensions = '3D'
 
     # Create a spline
     spline = curve_data.splines.new('BEZIER')
     spline.bezier_points.add(len(points) - 1)
+
+
 
     for i, point in enumerate(points):
         spline.bezier_points[i].co = point
@@ -423,9 +443,40 @@ def create_traffic_lane(points: list, which_lane=0):
     bpy.ops.mesh.select_all(action='SELECT')
     #Thicken
     bpy.ops.mesh.extrude_region_move(TRANSFORM_OT_translate={"value":(1, 0, 0)})
+    # bpy.ops.mesh.extrude_region_shrink_fatten(MESH_OT_extrude_region={"use_normal_flip":False, "mirror":False}, TRANSFORM_OT_shrink_fatten={"value":1})
+
     bpy.ops.object.mode_set(mode='OBJECT')
 
     return curve_obj
+
+# def create_traffic_lane(points: list, which_lane=0):
+#     curve_data = bpy.data.curves.new(name=f'lane_curve_{which_lane}', type='CURVE')
+#     curve_data.dimensions = '3D'
+#     spline = curve_data.splines.new('BEZIER')
+#     spline.bezier_points.add(len(points) - 1)
+
+#     for i, point in enumerate(points):
+#         bp = spline.bezier_points[i]
+#         bp.co = point
+#         bp.handle_left_type = 'AUTO'
+#         bp.handle_right_type = 'AUTO'
+
+#     # Create the curve object
+#     curve_obj = bpy.data.objects.new(f'lane_curve_object_{which_lane}', curve_data)
+#     bpy.context.collection.objects.link(curve_obj)
+
+#     # Create a Plane
+#     bpy.ops.mesh.primitive_plane_add(size=1, enter_editmode=False, align='WORLD', location=(0, 0, 0))
+#     plane = bpy.context.active_object
+#     plane.scale = (0.1, 5, 0)  # Adjust the first value for lane width, second for length (will be stretched)
+
+#     # Apply a Curve Modifier to the plane to follow the curve
+#     curve_modifier = plane.modifiers.new(type="CURVE", name="lane_curve_modifier")
+#     curve_modifier.object = curve_obj
+#     curve_modifier.deform_axis = 'POS_X'  # Adjust if needed
+
+#     return curve_obj, plane
+
 
 
 def create_and_apply_texture_material(lane_object, texture_path):
@@ -455,53 +506,154 @@ def read_lane_data(json_file):
     # Each lane is a list of points in the form [x, y, z] but should be list[tuple[float, float, float]]
     a = AssetKey.LANES
     with open(json_file, 'r') as file:
-        data = json.load(file)[0]
-        print("Data: ", data)
-        json_lanes = data['lanes']
+        data = json.load(file)
+        # json_lanes_allframes = data['lanes']
 
-    lanes = []
-    for l in json_lanes:
-        lane = []
-        for point in l:
-            point = ((a.coordinate_scaling *p) for p in point)
-            point = a.coordinate_flip(point)
-            point = tuple(point)
-            lane.append(point)
-        lanes.append(list(lane))
+    lanes = {}
+
+    for frame_data in data:
+        # print("Frame data: ", frame_data)
+        frame = frame_data['frame']
+        json_lanes_oneframe = frame_data['lanes']
+        lanes[frame] = []
+
+        for l in json_lanes_oneframe:
+            lane = []
+            for point in l:
+                point = ((a.coordinate_scaling *p) for p in point)
+                point = a.coordinate_flip(point)
+                point = tuple(point)
+                lane.append(point)
+            lanes[frame].append(list(lane))
+    
+    # print("Lanes: ", lanes.keys())
+    print("Read in this many frames: ", len(lanes), "from file: ", json_file)
     return lanes
     
-def create_traffic_lanes(lanes_data):
+def create_traffic_lanes(lanes_data:dict[int, list]):
     for i, lane_data in enumerate(lanes_data):
         points = [mathutils.Vector(point) for point in lane_data]
         lane = create_traffic_lane(points, i)
         # create_and_apply_texture_material(lane, lane_data['texture_path'])
 
-def create_one_frame(frame_idx, scene = 1):
+def adjust_render_settings(samples=64, render_engine='CYCLES', use_denoising=True):
+    """
+    Adjusts render settings for quicker renders.
+    
+    Parameters:
+        samples (int): The number of render samples.
+        render_engine (str): The render engine to use ('CYCLES' or 'BLENDER_EEVEE').
+        use_denoising (bool): Whether to use denoising.
+    """
+    bpy.context.scene.render.engine = render_engine
+    if render_engine == 'CYCLES':
+        bpy.context.scene.cycles.samples = samples
+        bpy.context.scene.cycles.use_denoising = use_denoising
+    elif render_engine == 'BLENDER_EEVEE':
+        bpy.context.scene.eevee.taa_render_samples = samples
 
-    print("Creating assetcontroller")
-    asset_controller = AssetController(scene = 1, json_files= [
-        (AssetKey.YOLOZOE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-yolodepth2140.json')),
-        # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
-    ])
+
+def create_one_frame(frame_idx, asset_controller: AssetController, output_folder, scene = 1, lane_data = None):
+
+    # adjust_render_settings()
+    
+    start = time.time()
 
     clear_scene()
 
-    asset_controller.place_first_frame(AssetKey.YOLOZOE_ASSETS)
-        
-    cam = add_camera((0, 10, 2), (0, 0, 2))
+    # asset_controller.place_first_frame(AssetKey.YOLOZOE_ASSETS)
+    asset_controller.place_assets(frame_idx, AssetKey.YOLOZOE_ASSETS)
+    print("Time to place assets for frame", frame_idx, ": ", time.time() - start)
+    start = time.time()
+    
+
+    cam = add_camera((0, 10, 4), (0, 0, 4))
     set_active_camera(cam.name)
 
     add_light((0, 0, 100), 'SUN', 100)
     add_light((0, 0, 0), 'SUN', 40)
 
-    create_traffic_lanes(read_lane_data(os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes2140.json")))
+    print("Time to add camera and lights: ", time.time() - start)
 
-    set_output_settings(os.path.join(OUTPUT_PATH, "P2Scene1Last.png"), frame_start=1, frame_end=1)
+    if lane_data is not None:
+
+        create_traffic_lanes(lane_data)
+
+    output_filename = "P2Scene" + str(scene) + "Frame" + str(frame_idx) + ".png"
+    set_output_settings(os.path.join(output_folder, output_filename), frame_start=1, frame_end=1)
+    bpy.context.view_layer.update()
     bpy.ops.render.render(write_still=True)
+
+def create_all_frames(asset_controller: AssetController, startframe = 1, endframe = -1, every_n_frames = 1, scene = 1, lanes = False):
+
+    import re
+    scene_folder = os.path.join(OUTPUT_PATH, "scene" + str(scene))
+    if not os.path.exists(scene_folder):
+        os.makedirs(scene_folder)
+        print("Created scene folder: ", scene_folder)
+
+    # run_num = 1
+    # while os.path.exists(os.path.join(scene_folder, 'scene' + str(scene) + 'run' + str(run_num))):
+    #     run_num += 1
+
+    run_folders = [f for f in os.listdir(scene_folder) if os.path.isdir(os.path.join(scene_folder, f)) and 'run' in f]
+    run_nums = [int(re.search(r'run(\d+)', f).group(1)) for f in run_folders]
+
+    run_num = max(run_nums, default=0) + 1
+
+    output_folder = os.path.join(scene_folder, 'scene' + str(scene) + 'run' + str(run_num))
+    os.makedirs(output_folder)
+
+    print("Created output folder: ", output_folder)
+
+
+    if endframe == -1:
+        endframe = max(asset_controller.frames.keys())
+
+    # Make sure startframe and endframe are within the range of the frames
+    # print(min(asset_controller.frames.keys()))
+    print(asset_controller.frames.keys())
+    startframe = max(min(asset_controller.frames.keys()), startframe)
+    if endframe != -1:
+        endframe = min(max(asset_controller.frames.keys()), endframe)
+    else:
+        endframe = max(asset_controller.frames.keys())
+
+    print("Start frame: ", startframe)
+    print("End frame: ", endframe)
+
+
+    # Calculates the number of frames it skips in the json
+
+    # # Get the number of frames between endframe and startframe in the list of frames
+    # num_frames_between = 
+    # skipsby = (endframe - startframe)/num_frames_between
+    # print("Skips by: ", skipsby)
+
+    # Frame range is the range of frames to render, taking the set of assetcontroller.frames.keys and only using every_n_frames in that set
+    # Basically if the range of frames is [1, 7, 13, 19, 25, 31, 37, 43, 49, 55, 61...] and every_n_frames is 5, then the loop should be using frames [1, 31, 61...]
+    # frame_range = 
+
+    if lanes:
+        # all_lanes are a dict of frame number to list of lanes
+        all_lanes = read_lane_data(asset_controller.lanes_json)
+
+    for frame in range(startframe, endframe+1, every_n_frames):
+
+        this_frame_lanes = all_lanes[frame] if lanes else None
+
+        create_one_frame(frame, asset_controller, output_folder, scene, this_frame_lanes)
+
 
 def main():
 
-    create_one_frame(2140)
+    asset_controller = AssetController(scene = 1, json_files= [
+        (AssetKey.YOLOZOE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-yolodepth.json')),
+        # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
+    ], lane_json = os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes.json")
+    )
+    # create_one_frame(2140, asset_controller, OUTPUT_PATH)
+    create_all_frames(asset_controller, startframe=25, endframe=31, every_n_frames=6, scene=1, lanes = True)
 
 if __name__ == "__main__":
     main()
