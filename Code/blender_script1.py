@@ -175,8 +175,8 @@ class AssetController:
             case "Motorcycle" | 'motorcycle':
                 asset_type = AssetType.Motorcycle
             case "StopSign" | "stop sign":
-                # asset_type = AssetType.StopSign
-                asset_type = AssetType.SpeedLimitSign
+                asset_type = AssetType.StopSign
+                # asset_type = AssetType.SpeedLimitSign
             case "TrafficCone":
                 asset_type = AssetType.TrafficCone
             case "Pedestrian" | 'person':
