@@ -36,6 +36,11 @@ Outputs:
 - `scene2_lanes.json`
 - ...
 
+## Car Pose Detection Pipeline:
+The code for the car pose detection is from the 3D-BoundingBox repository (https://github.com/skhadem/3D-BoundingBox). The network needs to be trained on the KITTI dataset, which needs to be downloaded, and there were no pre-trained weights available. The modified main Test script to generate output to be implemented in the repository is in 'Code/3D-BoundingBox.py'
+
+```sh
+
 ## Render Pipeline:
 First, the output files from the previous steps must be placed in the directory `JSONData/scene<scene_number>`, where `<scene_number>` is the number of the scene. Make sure to also create the `Output` directory in the root of this project.
 
