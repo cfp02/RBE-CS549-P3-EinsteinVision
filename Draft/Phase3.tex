@@ -57,14 +57,7 @@ Pedestrian pose estimation was performed using derivative of YOLOv8 trained on p
 \end{figure}
 
 \subsection{Improved Rendering Pipeline}
-The pipeline for rendering an entire scene was also improved in this stage. The details of the rendering pipeline are shown in Figure \ref{fig:pipeline}.
-
-\begin{figure}
-  \centering
-  \includegraphics[width=0.95\linewidth]{images/pipeline.png}
-  \caption{Final rendering pipeline. Green blocks are files, yellow blocks are Python scripts. Within the Python blocks, purple blocks are networks, and blue blocks are hand written steps.}
-  \label{fig:pipeline}
-\end{figure}
+The pipeline for rendering an entire scene was also improved in this stage. The details of the rendering pipeline are shown in Figure \ref{fig:pipeline} in Appendix \ref{app:pipeline}.
 
 \section{Shortcomings}
 After completing our entire pipeline, there are clearly some shortcomings, and things our team could simply not get working. Most notably car pose estimation and traffic light color detection were not fully implemented. There were some other subtle things missing, such as traffic cones, rigging pedestrian model in blender, lane type, speed limit signs, break light detection, and moving vs stationary vehicles. Most of these features were not implemented as networks found for the task could not be made to function on our data, but others were simply not implemented due to time constraints.

@@ -26,10 +26,10 @@ Outputs:
 - ...
 
 ## Lane Detection Pipeline:
-The code for the lane detection pipeline is in the `Code/lane_detection_pipeline.py` file. This script is intended to be run from the root directory of the [CLRNet repo](https://github.com/Turoad/CLRNet/tree/7269e9d1c1c650343b6c7febb8e764be538b1aed) with all the dependencies for CLRNet setup as stated in the repo. A checkpoint must also be downloaded, in our case the [LLAMAS DLA-34 checkpoint](https://github.com/Turoad/CLRNet/releases/download/models/llamas_r18.pth.zip), and placed in the root of the CLRNet repo. Finally, the config script `Code/clr_dla34_llamas.py` from this project must be placed in the root of the CLRNet repo. The code will output the results in the directory the code is run from, in the form of a JSON file for each scene.
+The code for the lane detection pipeline is in the `Code/lane_detection_pipeline.py` file. This script is intended to be run from the root directory of the [CLRNet repo](https://github.com/Turoad/CLRNet/tree/7269e9d1c1c650343b6c7febb8e764be538b1aed) with all the dependencies for CLRNet setup as stated in the repo. A checkpoint must also be downloaded, in our case the [LLAMAS DLA-34 checkpoint](https://github.com/Turoad/CLRNet/releases/download/models/llamas_r18.pth.zip), and placed in the root of the CLRNet repo. Finally, the config script `Code/clr_dla34_llamas.py` and the detection script `Code/detect.py` from this project must be placed in the root of the CLRNet repo. The code will output the results in the directory the code is run from, in the form of a JSON file for each scene.
 
 ```sh
-python clr_dla34_llamas.py --load_from llamas_dla34.pth
+python detect.py clr_dla34_llamas.py --load_from llamas_dla34.pth
 ```
 Outputs:
 - `scene1_lanes.json`
