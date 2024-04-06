@@ -19,7 +19,7 @@ except ImportError:
 
 PI = math.pi
 ASSETS_DIR = os.path.normpath(os.path.join(BASE_PATH, "../P3Data", "Assets"))
-OUTPUT_PATH = os.path.normpath(os.path.join(BASE_PATH, "../Output"))
+OUTPUT_PATH = 'L://'   #os.path.normpath(os.path.join(BASE_PATH, "../Output"))
 JSON_DATA_PATH = os.path.normpath(os.path.join(BASE_PATH,"../JSONData"))
 
 class AssetKey(enum.Enum):
