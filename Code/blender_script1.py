@@ -19,7 +19,7 @@ except ImportError:
 
 PI = math.pi
 ASSETS_DIR = os.path.normpath(os.path.join(BASE_PATH, "../P3Data", "Assets"))
-OUTPUT_PATH = os.path.normpath(os.path.join(BASE_PATH, "../Output"))
+OUTPUT_PATH = 'L://'   #os.path.normpath(os.path.join(BASE_PATH, "../Output"))
 JSON_DATA_PATH = os.path.normpath(os.path.join(BASE_PATH,"../JSONData"))
 
 class AssetKey(enum.Enum):
@@ -669,8 +669,8 @@ def main():
     # create_one_frame(2140, asset_controller, OUTPUT_PATH)
     # create_all_frames(asset_controller2, startframe=1, endframe=-1, every_n_frames=6, scene=2, lanes = True)
 
-    a3 = create_asset_controller(3)
-    create_all_frames(a3, startframe=1, endframe=-1, every_n_frames=6, scene=3, lanes = True)
+    scene = 4
+    create_all_frames(create_asset_controller(scene), startframe=1, endframe=-1, every_n_frames=6, scene=scene, lanes = True)
 
 if __name__ == "__main__":
     main()
