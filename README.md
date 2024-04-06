@@ -37,7 +37,7 @@ Outputs:
 - ...
 
 ## Car Pose Detection Pipeline:
-The code for the car pose detection is from the 3D-BoundingBox repository (https://github.com/skhadem/3D-BoundingBox). The network needs to be trained on the KITTI dataset, which needs to be downloaded, and there were no pre-trained weights available. The modified main Test script to generate output to be implemented in the repository is in 'Code/3D-BoundingBox.py'
+The code for the car pose detection is from the 3D-BoundingBox repository (https://github.com/skhadem/3D-BoundingBox). The network needs to be trained on the KITTI dataset, which needs to be downloaded, and there were no pre-trained weights available. The modified main Test script to generate output to be implemented in the repository is in 'Code/3D-BoundingBox.py,' and outputs a JSON file for each video passed in. 
 
 ```sh
 
