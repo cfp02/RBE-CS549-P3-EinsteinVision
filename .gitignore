@@ -1,7 +1,6 @@
 .venv
-Data
-P3Data
-P3Data.zip
+P3Data/*
+!P3Data/Assets
 *.pt
 /*.png
 *.zip
