@@ -11,6 +11,8 @@ If `venv` is not installed run:
 ```sh
 pip install virtualenv
 ```
+## Downloading the data
+Download the P3Data folder into the root of the repo. Make sure not to overwrite the existing files.
 
 ## Objects Pipeline:
 The code for the objects pipeline is in the `objects_pipeline.py` file. The code will run inference on all scenes, and automatically download all needed checkpoints. The code will output the results in the directory the code is run from, in the form of a JSON file for each scene.
@@ -39,7 +41,7 @@ First, the output files from the previous steps must be placed in the directory 
 
 To run the render pipeline, open `Blender/script.blend` file with Blender. Set the scene to render in the main function, and then run the script. Output is shown in the Blender console. The code will output the images in the `Output/scene<scene_number>/scene<scene_number>run<run_number>` directory.
 
-Finally, run the following command to generate the video for scene 3, run 1, with 6 fps:
+Finally, run the following command to generate the video from the frames. The command is using scene 3, run 1, and 6 fps as example arguments:
 ```sh
 python Blender/video_stitcher.py 3 1 6
 ```
