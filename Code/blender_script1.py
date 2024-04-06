@@ -654,21 +654,6 @@ def create_asset_controller(scene):
     return asset_controller
 
 def main():
-
-    asset_controller1 = AssetController(scene = 1, json_files= [
-        (AssetKey.YOLOZOE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-yolodepth.json')),
-        # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
-    ], lane_json = os.path.join(JSON_DATA_PATH, "scene1", "scene1-lanes.json")
-    )
-    asset_controller2 = AssetController(scene = 1, json_files= [
-        (AssetKey.YOLOZOE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene2/scene2_assets.json')),
-        # (AssetKey.CARPOSE_ASSETS, os.path.join(JSON_DATA_PATH, 'scene1/scene1-carposes2140.json')),
-    ], lane_json = os.path.join(JSON_DATA_PATH, "scene2", "scene2_lanes.json")
-    )
-    
-    # create_one_frame(2140, asset_controller, OUTPUT_PATH)
-    # create_all_frames(asset_controller2, startframe=1, endframe=-1, every_n_frames=6, scene=2, lanes = True)
-
     scene = 4
     create_all_frames(create_asset_controller(scene), startframe=1, endframe=-1, every_n_frames=6, scene=scene, lanes = True)
 
